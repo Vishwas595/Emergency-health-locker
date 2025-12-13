@@ -6,10 +6,7 @@ const Patient = require("./models/Patient");
 const app = express();
 app.use(express.json());
 
-mongoose.connect(
-  "mongodb+srv://vishwavarshaa7_db_user:ZQYT2zUjdac4qJbG@cluster0.ogxvqwx.mongodb.net/quickmedic"
-)
-
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch(err => console.log("❌ DB Connection error:", err));
 
