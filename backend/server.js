@@ -5,6 +5,8 @@ const Patient = require("./models/Patient");
 
 const app = express();
 app.use(express.json());
+const cors = require("cors");
+app.use(cors());
 
 // ===============================
 // ✅ ROOT ROUTE (VERY IMPORTANT)
