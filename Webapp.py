@@ -147,7 +147,8 @@ st.set_page_config(page_title="Emergency Health Locker", page_icon="🏥")
 st.title("🏥 Emergency Health Locker")
 
 # ---- QR / URL Scan ----
-patient_id_param = st.query_params.get("patient_id", [None])[0]
+patient_id_param = st.query_params.get("patient_id")
+
 
 if patient_id_param:
     st.info(f"Fetching patient ID: **{patient_id_param}**")
