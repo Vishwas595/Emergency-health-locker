@@ -46,7 +46,9 @@ if not patient_id:
 # Fetch patient data
 with st.spinner("Loading emergency information..."):
     try:
-        response = requests.get(f"{BACKEND_URL}/{patient_id}", timeout=10)
+        response = requests.get(
+            f"https://emergency-health-locker.onrender.com/api/public/{patient_id}",timeout=10)
+
         
         if response.status_code == 200:
             patient = response.json()
