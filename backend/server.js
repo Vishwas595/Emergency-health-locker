@@ -5,6 +5,10 @@ const cors = require("cors");
 const Patient = require("./models/Patient");
 
 const app = express();
+
+// ===============================
+// BASIC MIDDLEWARE
+// ===============================
 app.use(express.json());
 app.use(cors());
 
@@ -16,19 +20,32 @@ app.get("/", (req, res) => {
 });
 
 // ===============================
-// MongoDB Connection
+// ADMIN AUTH MIDDLEWARE
+// ===============================
+const adminAuth = (req, res, next) => {
+  const adminKey = req.headers["x-admin-key"];
+
+  if (!adminKey || adminKey !== process.env.ADMIN_SECRET) {
+    return res.status(401).json({ error: "Unauthorized admin access" });
+  }
+
+  next();
+};
+
+// ===============================
+// MONGODB CONNECTION
 // ===============================
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.error("❌ MongoDB error:", err));
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // ===============================
 // ADMIN / USER ROUTES
 // ===============================
 
-// Get ALL patients (admin)
-app.get("/api/patients", async (req, res) => {
+// 🔒 ADMIN – Get ALL patients
+app.get("/api/patients", adminAuth, async (req, res) => {
   try {
     const patients = await Patient.find();
     res.json({ patients });
@@ -37,21 +54,25 @@ app.get("/api/patients", async (req, res) => {
   }
 });
 
-// Get ONE patient (admin / user)
+// 👤 USER / ADMIN – Get ONE patient by ID
 app.get("/api/patients/:id", async (req, res) => {
   try {
-    const patient = await Patient.findOne({ Patient_ID: req.params.id });
+    const patient = await Patient.findOne({
+      Patient_ID: req.params.id,
+    });
+
     if (!patient) {
       return res.status(404).json({ error: "Patient not found" });
     }
+
     res.json(patient);
   } catch (err) {
     res.status(500).json({ error: "Error fetching patient" });
   }
 });
 
-// Add NEW patient (admin)
-app.post("/api/patients", async (req, res) => {
+// 🔒 ADMIN – Add NEW patient
+app.post("/api/patients", adminAuth, async (req, res) => {
   try {
     const patient = new Patient(req.body);
     await patient.save();
@@ -62,7 +83,7 @@ app.post("/api/patients", async (req, res) => {
 });
 
 // ===============================
-// PUBLIC EMERGENCY ROUTE (QR / NFC)
+// 🌍 PUBLIC EMERGENCY ROUTE (QR / NFC)
 // ===============================
 app.get("/api/public/:id", async (req, res) => {
   try {
@@ -83,7 +104,7 @@ app.get("/api/public/:id", async (req, res) => {
         Recent_Surgeries: 1,
         Vital_Signs_Last_Recorded: 1,
         DNR_Status: 1,
-        Organ_Donor: 1
+        Organ_Donor: 1,
       }
     );
 
@@ -98,7 +119,7 @@ app.get("/api/public/:id", async (req, res) => {
 });
 
 // ===============================
-// START SERVER (ALWAYS LAST)
+// START SERVER (RENDER SAFE)
 // ===============================
 const PORT = process.env.PORT || 5000;
 
