@@ -1,21 +1,48 @@
-import pandas as pd
 from pymongo import MongoClient
+import math
 
-# 1. Connect to MongoDB
-client = MongoClient("mongodb://localhost:27017/")
-db = client["quickmedic"] # Database
-collection = db["patients"] # Collection
+# 🔐 MongoDB connection
+MONGO_URI = "mongodb+srv://vishwavarshaa7_db_user:ZQYT2zUjdac4qJbG@cluster0.ogxvqwx.mongodb.net/"
+client = MongoClient(MONGO_URI)
 
-# 2. Load Excel file
-file_path = r"C:\Users\Lenovo\Downloads\Emergency_Health_Locker_250_Rows.xlsx"
-df = pd.read_excel(file_path)
+db = client["quickmedic"]
+patients = db["patients"]
 
-# 3. Convert DataFrame to dictionary
-data = df.to_dict(orient="records")
+# 🔁 Update all documents
+for patient in patients.find():
 
-# 4. Insert into MongoDB
-if data:
-    collection.insert_many(data)
-    print(f"✅ Successfully imported {len(data)} rows into MongoDB!")
-else:
-    print("⚠️ No data found in Excel file.")
+    updates = {}
+
+    # Fix NaN values
+    for field in [
+        "Current_Medications",
+        "Recent_Surgeries",
+        "Drug_Allergies",
+        "Other_Allergies",
+        "Medical_Devices",
+        "Emergency_Status"
+    ]:
+        if field in patient and (
+            patient[field] is None or
+            patient[field] == "NaN" or
+            (isinstance(patient[field], float) and math.isnan(patient[field]))
+        ):
+            updates[field] = ""
+
+    # Add new structured fields (if not present)
+    if "Medical_History" not in patient:
+        updates["Medical_History"] = []
+
+    if "Uploaded_Files" not in patient:
+        updates["Uploaded_Files"] = []
+
+    if "Last_Updated" not in patient:
+        updates["Last_Updated"] = "system_migration"
+
+    if updates:
+        patients.update_one(
+            {"_id": patient["_id"]},
+            {"$set": updates}
+        )
+
+print("✅ Database migration completed successfully")

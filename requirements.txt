@@ -3,3 +3,6 @@ requests
 qrcode
 Pillow
 fpdf
+pdfplumber
+pytesseract
+
