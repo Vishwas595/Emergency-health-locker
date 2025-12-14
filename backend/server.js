@@ -1,60 +1,56 @@
 // server.js
 const express = require("express");
 const mongoose = require("mongoose");
+const cors = require("cors");
 const Patient = require("./models/Patient");
 
 const app = express();
 app.use(express.json());
-const cors = require("cors");
 app.use(cors());
 
 // ===============================
-// ✅ ROOT ROUTE (VERY IMPORTANT)
+// ROOT ROUTE (Render health check)
 // ===============================
 app.get("/", (req, res) => {
   res.send("🚑 Emergency Health Locker Backend is Running");
 });
 
 // ===============================
-// ✅ MONGODB CONNECTION
+// MongoDB Connection
 // ===============================
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+  .catch((err) => console.error("❌ MongoDB error:", err));
 
 // ===============================
-// ✅ API ROUTES
+// ADMIN / USER ROUTES
 // ===============================
 
-// GET all patients
+// Get ALL patients (admin)
 app.get("/api/patients", async (req, res) => {
   try {
     const patients = await Patient.find();
-    res.json(patients);
+    res.json({ patients });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch patients" });
   }
 });
 
-// GET single patient by ID
+// Get ONE patient (admin / user)
 app.get("/api/patients/:id", async (req, res) => {
   try {
-    const patient = await Patient.findOne({
-      Patient_ID: req.params.id,
-    });
-
+    const patient = await Patient.findOne({ Patient_ID: req.params.id });
     if (!patient) {
       return res.status(404).json({ error: "Patient not found" });
     }
-
     res.json(patient);
   } catch (err) {
     res.status(500).json({ error: "Error fetching patient" });
   }
 });
 
-// POST new patient
+// Add NEW patient (admin)
 app.post("/api/patients", async (req, res) => {
   try {
     const patient = new Patient(req.body);
@@ -66,7 +62,43 @@ app.post("/api/patients", async (req, res) => {
 });
 
 // ===============================
-// ✅ START SERVER (RENDER SAFE)
+// PUBLIC EMERGENCY ROUTE (QR / NFC)
+// ===============================
+app.get("/api/public/:id", async (req, res) => {
+  try {
+    const patient = await Patient.findOne(
+      { Patient_ID: req.params.id },
+      {
+        Patient_ID: 1,
+        Name: 1,
+        Date_of_Birth: 1,
+        Gender: 1,
+        Blood_Type: 1,
+        Emergency_Contacts: 1,
+        Emergency_Status: 1,
+        Drug_Allergies: 1,
+        Other_Allergies: 1,
+        Current_Medications: 1,
+        Medical_Devices: 1,
+        Recent_Surgeries: 1,
+        Vital_Signs_Last_Recorded: 1,
+        DNR_Status: 1,
+        Organ_Donor: 1
+      }
+    );
+
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
+
+    res.json(patient);
+  } catch (err) {
+    res.status(500).json({ error: "Error fetching emergency data" });
+  }
+});
+
+// ===============================
+// START SERVER (ALWAYS LAST)
 // ===============================
 const PORT = process.env.PORT || 5000;
 
