@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-import re
+from datetime import date
 
 from utils.qr_generator import (
     generate_emergency_qr,
@@ -8,6 +8,8 @@ from utils.qr_generator import (
     get_nfc_instructions
 )
 from utils.pdf_generator import generate_medical_pdf
+from utils.file_parser import extract_text_from_file
+from utils.medical_mapper import map_medical_data
 
 # ===============================
 # CONFIG
@@ -18,213 +20,188 @@ st.set_page_config(
     layout="wide"
 )
 
-BACKEND_URL = "https://emergency-health-locker.onrender.com/api/patients"
+API_BASE = "https://emergency-health-locker.onrender.com/api"
 
 st.title("👤 User Dashboard")
 st.markdown("### View / Upload Your Medical Information")
 st.divider()
 
 # ===============================
-# SAFE FILE PARSER IMPORT
+# MODE SELECTION
 # ===============================
-try:
-    from utils.file_parser import extract_text_from_file
-    FILE_PARSER_AVAILABLE = True
-except Exception:
-    FILE_PARSER_AVAILABLE = False
+st.subheader("🧭 Select Action")
+
+mode = st.radio(
+    "What do you want to do?",
+    ["➕ Add New Patient", "✏️ Update Existing Patient"]
+)
 
 # ===============================
-# STEP A1: FILE UPLOAD
+# FILE UPLOAD
 # ===============================
-st.header("📤 Upload Medical Record (One-time optional)")
+st.divider()
+st.header("📤 Upload Medical Record (Optional)")
 
 uploaded_file = st.file_uploader(
     "Upload medical report (PDF / Image)",
     type=["pdf", "png", "jpg", "jpeg"]
 )
 
-extracted_text = ""
+auto_data = {}
 
 if uploaded_file:
-    st.success("✅ File uploaded successfully")
-    st.write("Filename:", uploaded_file.name)
+    with st.spinner("Reading medical document..."):
+        extracted_text = extract_text_from_file(uploaded_file)
 
-    if FILE_PARSER_AVAILABLE:
-        with st.spinner("Reading medical document..."):
-            extracted_text = extract_text_from_file(uploaded_file)
-
+    if extracted_text:
         st.subheader("📄 Extracted Text (Review)")
-        st.text_area(
-            "System detected the following text:",
-            extracted_text,
-            height=250
-        )
-    else:
-        st.warning("⚠️ File parser not installed. Upload feature limited.")
+        st.text_area("Detected text", extracted_text, height=220)
+
+        auto_data = map_medical_data(extracted_text)
+        st.success("✅ Medical data auto-detected")
 
 # ===============================
-# STEP A2: SIMPLE AUTO EXTRACTION
-# ===============================
-def auto_detect(patterns, text):
-    for p in patterns:
-        match = re.search(p, text, re.IGNORECASE)
-        if match:
-            return match.group(1)
-    return ""
-
-blood_type = auto_detect(
-    [r"(A\+|A-|B\+|B-|AB\+|AB-|O\+|O-)"],
-    extracted_text
-)
-
-drug_allergies = auto_detect(
-    [r"allerg(y|ies)[:\- ]+([A-Za-z ,]+)"],
-    extracted_text
-)
-
-medications = auto_detect(
-    [r"medication(s)?[:\- ]+([A-Za-z0-9 ,mg]+)"],
-    extracted_text
-)
-
-surgeries = auto_detect(
-    [r"surgery|surgeries[:\- ]+([A-Za-z0-9 ,]+)"],
-    extracted_text
-)
-
-# ===============================
-# STEP B: PATIENT ID LOOKUP
+# PATIENT ID
 # ===============================
 st.divider()
-st.header("🔍 Load Existing Profile")
+st.header("🆔 Patient Identification")
 
-col1, col2 = st.columns([3, 1])
+patient = {}
 
-with col1:
-    patient_id = st.text_input(
-        "Enter Your Patient ID",
-        placeholder="e.g., P001"
-    )
+if mode == "➕ Add New Patient":
+    st.info("🆕 Creating a NEW patient")
+    patient_id = st.text_input("Enter NEW Patient ID", placeholder="e.g., P253")
 
-with col2:
-    st.write("")
-    search_btn = st.button("Get My Info", type="primary", use_container_width=True)
+else:
+    st.info("🔄 Updating EXISTING patient")
+    patient_id = st.text_input("Enter Existing Patient ID", placeholder="e.g., P001")
 
-patient = None
-
-if search_btn and patient_id:
-    with st.spinner("Fetching your data..."):
-        r = requests.get(f"{BACKEND_URL}/{patient_id}")
+    if patient_id:
+        r = requests.get(f"{API_BASE}/patients/{patient_id}")
         if r.status_code == 200:
             patient = r.json()
-            st.success("✅ Profile loaded")
+            st.success("✅ Patient loaded")
         else:
-            st.warning("No existing record found. You can create one.")
+            st.error("❌ Patient not found")
+            patient = {}
 
 # ===============================
-# STEP C: EDITABLE FORM (AUTO-FILLED)
+# FORM
 # ===============================
 st.divider()
-st.header("✏️ Review & Update Your Details")
+st.header("✏️ Review & Update Details")
 
-with st.form("user_edit_form"):
-    colA, colB = st.columns(2)
+with st.form("user_form"):
+    col1, col2 = st.columns(2)
 
-    with colA:
+    with col1:
         name = st.text_input(
             "Full Name",
-            value=patient.get("Name", "") if patient else ""
+            value=auto_data.get("Name") or patient.get("Name", "")
         )
-        dob = st.text_input(
+
+        dob_raw = patient.get("Date_of_Birth")
+        dob = st.date_input(
             "Date of Birth",
-            value=patient.get("Date_of_Birth", "") if patient else ""
+            value=date.fromisoformat(dob_raw) if dob_raw else None,
+            min_value=date(1900, 1, 1),
+            max_value=date.today()
         )
+
         gender = st.selectbox(
             "Gender",
             ["Male", "Female", "Other"],
             index=0
         )
-        blood = st.text_input(
-            "Blood Type",
-            value=blood_type or (patient.get("Blood_Type", "") if patient else "")
+
+        blood_groups = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+        default_bg = auto_data.get("Blood_Group") or patient.get("Blood_Type", "")
+        blood = st.selectbox(
+            "Blood Group",
+            blood_groups,
+            index=blood_groups.index(default_bg) if default_bg in blood_groups else 0
         )
 
-    with colB:
+    with col2:
         emergency_contact = st.text_input(
             "Emergency Contact",
-            value=patient.get("Emergency_Contacts", "") if patient else ""
+            value=patient.get("Emergency_Contacts", "")
         )
+
         meds = st.text_area(
             "Current Medications",
-            value=medications or (patient.get("Current_Medications", "") if patient else "")
+            value=patient.get("Current_Medications", "")
         )
+
         drug_all = st.text_area(
             "Drug Allergies",
-            value=drug_allergies or (patient.get("Drug_Allergies", "") if patient else "")
+            value=patient.get("Drug_Allergies", "")
         )
+
         surg = st.text_area(
             "Recent Surgeries",
-            value=surgeries or (patient.get("Recent_Surgeries", "") if patient else "")
+            value=patient.get("Recent_Surgeries", "")
         )
 
     emergency_status = st.text_input(
-        "Emergency Alert",
-        value=patient.get("Emergency_Status", "") if patient else ""
+        "Emergency Alert / Condition",
+        value=patient.get("Emergency_Status", "")
     )
 
-    submitted = st.form_submit_button("✅ Save / Update My Data")
+    lab_findings = st.text_area(
+        "Recent Lab Findings",
+        value=(
+            f"HbA1c: {auto_data.get('HbA1c','')}\n"
+            f"Fasting Sugar: {auto_data.get('Fasting_Sugar','')}"
+        ).strip() or patient.get("Recent_Lab_Findings", "")
+    )
 
-    if submitted:
-        payload = {
-            "Patient_ID": patient_id,
-            "Name": name,
-            "Date_of_Birth": dob,
-            "Gender": gender,
-            "Blood_Type": blood,
-            "Emergency_Contacts": emergency_contact,
-            "Current_Medications": meds,
-            "Drug_Allergies": drug_all,
-            "Recent_Surgeries": surg,
-            "Emergency_Status": emergency_status,
-        }
+    submit = st.form_submit_button("✅ Save Patient Data")
 
-        r = requests.post(BACKEND_URL, json=payload)
-        if r.status_code in [200, 201]:
-            st.success("🎉 Data saved successfully!")
+    if submit:
+        if not patient_id:
+            st.error("❌ Patient ID is required")
         else:
-            st.error("❌ Failed to save data")
+            payload = {
+                "Patient_ID": patient_id,
+                "Name": name,
+                "Date_of_Birth": dob.isoformat() if dob else "",
+                "Gender": gender,
+                "Blood_Type": blood,
+                "Emergency_Contacts": emergency_contact,
+                "Current_Medications": meds,
+                "Drug_Allergies": drug_all,
+                "Recent_Surgeries": surg,
+                "Emergency_Status": emergency_status,
+                "Recent_Lab_Findings": lab_findings
+            }
+
+            r = requests.post(f"{API_BASE}/user/patients", json=payload)
+            if r.status_code in [200, 201]:
+                st.success("🎉 Patient data saved!")
+                patient = payload
+            else:
+                st.error(r.text)
 
 # ===============================
-# STEP D: QR / NFC / PDF
+# QR & PDF
 # ===============================
-if patient_id:
+if patient_id and patient:
     st.divider()
-    st.header("🔳 QR Code & NFC")
+    st.header("🔳 Emergency Access")
 
     qr = generate_emergency_qr(patient_id)
-    st.image(qr, width=280)
+    st.image(qr, width=250)
 
-    st.download_button(
-        "⬇️ Download QR Code",
-        qr,
-        file_name=f"QR_{patient_id}.png",
-        mime="image/png"
-    )
-
-    public_link = get_public_link(patient_id)
-    st.code(public_link)
-
+    st.code(get_public_link(patient_id))
     st.markdown(get_nfc_instructions())
 
-    st.divider()
-    st.header("📄 Download Medical PDF")
-
-    pdf = generate_medical_pdf(payload if submitted else patient)
+    pdf = generate_medical_pdf(patient)
     st.download_button(
-        "Download PDF",
+        "📄 Download Medical PDF",
         pdf,
         file_name=f"Medical_{patient_id}.pdf",
         mime="application/pdf"
     )
 
-st.caption("Emergency Health Locker • User Module • Phase 1 Complete")
+st.caption("Emergency Health Locker • User Module • Phase 2A ✅ COMPLETE")
