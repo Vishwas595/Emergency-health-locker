@@ -78,7 +78,7 @@ label, .stRadio label {
 </style>
 """, unsafe_allow_html=True)
 
-API_BASE = "http://localhost:5000/api"
+API_BASE = "https://emergency-health-locker.onrender.com/api"
 
 # ===============================
 # ADMIN CREDENTIALS
