@@ -37,7 +37,7 @@ mode = st.radio(
 )
 
 # ===============================
-# FILE UPLOAD
+# FILE UPLOAD (AUTO EXTRACTION)
 # ===============================
 st.divider()
 st.header("📤 Upload Medical Record (Optional)")
@@ -56,22 +56,21 @@ if uploaded_file:
     if extracted_text:
         st.subheader("📄 Extracted Text (Review)")
         st.text_area("Detected text", extracted_text, height=220)
-
         auto_data = map_medical_data(extracted_text)
         st.success("✅ Medical data auto-detected")
 
 # ===============================
-# PATIENT ID
+# PATIENT IDENTIFICATION
 # ===============================
 st.divider()
 st.header("🆔 Patient Identification")
 
+patient_id = ""
 patient = {}
 
 if mode == "➕ Add New Patient":
     st.info("🆕 Creating a NEW patient")
-    patient_id = st.text_input("Enter NEW Patient ID", placeholder="e.g., P253")
-
+    patient_id = st.text_input("Enter NEW Patient ID", placeholder="e.g., P301")
 else:
     st.info("🔄 Updating EXISTING patient")
     patient_id = st.text_input("Enter Existing Patient ID", placeholder="e.g., P001")
@@ -86,7 +85,7 @@ else:
             patient = {}
 
 # ===============================
-# FORM
+# PATIENT FORM
 # ===============================
 st.divider()
 st.header("✏️ Review & Update Details")
@@ -111,7 +110,9 @@ with st.form("user_form"):
         gender = st.selectbox(
             "Gender",
             ["Male", "Female", "Other"],
-            index=0
+            index=["Male", "Female", "Other"].index(
+                patient.get("Gender", "Male")
+            ) if patient.get("Gender") else 0
         )
 
         blood_groups = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
@@ -176,32 +177,109 @@ with st.form("user_form"):
                 "Recent_Lab_Findings": lab_findings
             }
 
-            r = requests.post(f"{API_BASE}/user/patients", json=payload)
-            if r.status_code in [200, 201]:
+            save = requests.post(f"{API_BASE}/user/patients", json=payload)
+
+            if save.status_code in [200, 201]:
                 st.success("🎉 Patient data saved!")
-                patient = payload
             else:
-                st.error(r.text)
+                st.error(save.text)
+
+# ===============================
+# PHASE 2B – MEDICAL RECORDS
+# ===============================
+if patient_id:
+    st.divider()
+    st.header("📁 Medical Records")
+
+    st.subheader("📤 Upload New Record")
+
+    record_type = st.selectbox(
+        "Record Type",
+        ["Lab Report", "Prescription", "Medical Report", "Scan", "Other"]
+    )
+
+    record_title = st.text_input(
+        "Record Title",
+        placeholder="e.g., HbA1c Blood Test"
+    )
+
+    record_file = st.file_uploader(
+        "Upload PDF / Image",
+        type=["pdf", "png", "jpg", "jpeg"],
+        key="record_upload"
+    )
+
+    if st.button("⬆️ Upload Record"):
+        if not record_file or not record_title:
+            st.error("Please select file and enter title")
+        else:
+            files = {
+                "file": (record_file.name, record_file, record_file.type)
+            }
+            data = {
+                "Patient_ID": patient_id,
+                "Record_Type": record_type,
+                "Record_Title": record_title,
+                "Uploaded_By": "User"
+            }
+
+            res = requests.post(
+                f"{API_BASE}/records/upload",
+                files=files,
+                data=data
+            )
+
+            if res.status_code == 201:
+                st.success("✅ Record uploaded successfully")
+            else:
+                st.error(res.text)
+
+    # ===============================
+    # LIST RECORDS
+    # ===============================
+    st.subheader("📂 Uploaded Records")
+
+    records_res = requests.get(f"{API_BASE}/records/{patient_id}")
+
+    if records_res.status_code == 200:
+        records = records_res.json()
+
+        if not records:
+            st.info("No records uploaded yet.")
+        else:
+            for r in records:
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.markdown(f"**{r['Record_Title']}**")
+                    st.caption(f"{r['Record_Type']} • {r['File_Name']}")
+                with col2:
+                    st.markdown(
+                        f"[⬇️ Download]({API_BASE}/records/download/{r['_id']})",
+                        unsafe_allow_html=True
+                    )
+                st.divider()
 
 # ===============================
 # QR & PDF
 # ===============================
-if patient_id and patient:
-    st.divider()
-    st.header("🔳 Emergency Access")
+if patient_id:
+    fresh = requests.get(f"{API_BASE}/patients/{patient_id}")
+    if fresh.status_code == 200:
+        patient = fresh.json()
 
-    qr = generate_emergency_qr(patient_id)
-    st.image(qr, width=250)
+        st.divider()
+        st.header("🔳 Emergency Access")
 
-    st.code(get_public_link(patient_id))
-    st.markdown(get_nfc_instructions())
+        st.image(generate_emergency_qr(patient_id), width=250)
+        st.code(get_public_link(patient_id))
+        st.markdown(get_nfc_instructions())
 
-    pdf = generate_medical_pdf(patient)
-    st.download_button(
-        "📄 Download Medical PDF",
-        pdf,
-        file_name=f"Medical_{patient_id}.pdf",
-        mime="application/pdf"
-    )
+        pdf = generate_medical_pdf(patient)
+        st.download_button(
+            "📄 Download Medical PDF",
+            pdf,
+            file_name=f"Medical_{patient_id}.pdf",
+            mime="application/pdf"
+        )
 
-st.caption("Emergency Health Locker • User Module • Phase 2A ✅ COMPLETE")
+st.caption("Emergency Health Locker • User Module • Phase 2B ✅ COMPLETE")

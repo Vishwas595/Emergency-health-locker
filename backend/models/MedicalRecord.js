@@ -1,48 +1,56 @@
 const mongoose = require("mongoose");
 
-const MedicalRecordSchema = new mongoose.Schema({
-  Patient_ID: {
-    type: String,
-    required: true,
-    index: true
-  },
+const MedicalRecordSchema = new mongoose.Schema(
+  {
+    // 🔗 Link to patient
+    Patient_ID: {
+      type: String,
+      required: true,
+      index: true
+    },
 
-  Record_Type: {
-    type: String,
-    enum: ["Lab Report", "Prescription", "Medical Report", "Scan"],
-    required: true
-  },
+    // 📂 Type of medical record
+    Record_Type: {
+      type: String,
+      enum: ["Lab Report", "Prescription", "Medical Report", "Scan", "Other"],
+      required: true
+    },
 
-  Record_Title: {
-    type: String,
-    required: true
-  },
+    Record_Title: {
+      type: String,
+      required: true
+    },
 
-  File_Name: {
-    type: String,
-    required: true
-  },
+    // 📄 File details
+    File_Name: {
+      type: String,
+      required: true
+    },
 
-  File_Mime: {
-    type: String,
-    required: true
-  },
+    File_Mime_Type: {
+      type: String,
+      required: true
+    },
 
-  File_Data: {
-    type: Buffer,
-    required: true
-  },
+    File_Data: {
+      type: Buffer,
+      required: true
+    },
 
-  Uploaded_By: {
-    type: String,
-    enum: ["User", "Admin"],
-    default: "User"
-  },
+    File_Size: {
+      type: Number
+    },
 
-  Uploaded_At: {
-    type: Date,
-    default: Date.now
+    // 👤 Uploader info
+    Uploaded_By: {
+      type: String,
+      enum: ["User", "Admin"],
+      default: "User"
+    }
+  },
+  {
+    timestamps: true
   }
-});
+);
 
 module.exports = mongoose.model("MedicalRecord", MedicalRecordSchema);
