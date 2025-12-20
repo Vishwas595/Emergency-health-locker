@@ -17,17 +17,17 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-/* Remove Streamlit chrome */
+/* Hide Streamlit header + sidebar */
 header, footer, section[data-testid="stSidebar"] {
     display: none !important;
 }
 
-/* Remove default top padding */
+/* Remove extra top padding */
 .block-container {
-    padding-top: 0 !important;
+    padding-top: 0rem !important;
 }
 
-/* Dark app background */
+/* Dark background */
 div[data-testid="stAppViewContainer"] {
     background-color: #0e1117;
 }
@@ -36,11 +36,11 @@ div[data-testid="stAppViewContainer"] {
 .login-wrapper {
     min-height: 100vh;
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
 }
 
-/* Dark login card (NO WHITE BOX) */
+/* Login card */
 .login-box {
     width: 460px;
     padding: 36px;
@@ -55,7 +55,7 @@ div[data-testid="stAppViewContainer"] {
     margin-bottom: 14px;
 }
 
-/* Title — FORCE WHITE */
+/* Title */
 .title {
     font-size: 32px;
     font-weight: 700;
@@ -70,13 +70,13 @@ div[data-testid="stAppViewContainer"] {
     margin-bottom: 28px;
 }
 
-/* Inputs & labels */
-label, .stRadio label {
+label {
     color: #e5e7eb !important;
 }
 
 </style>
 """, unsafe_allow_html=True)
+
 
 API_BASE = "https://emergency-health-locker.onrender.com/api"
 
