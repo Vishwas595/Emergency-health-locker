@@ -3,31 +3,31 @@ import requests
 import base64
 
 # ===============================
-# PAGE CONFIG (IMPORTANT)
+# PAGE CONFIG (CRITICAL)
 # ===============================
 st.set_page_config(
     page_title="Login | QURE",
     page_icon="🔐",
-    layout="wide"   # ✅ MUST be wide (prevents white spacer)
+    layout="wide"   # MUST be wide to avoid Streamlit spacer
 )
 
 # ===============================
-# GLOBAL CSS (CLEAN + STABLE)
+# GLOBAL CSS (FINAL & CLEAN)
 # ===============================
 st.markdown("""
 <style>
 
-/* Hide Streamlit header & sidebar */
+/* Remove Streamlit chrome */
 header, footer, section[data-testid="stSidebar"] {
     display: none !important;
 }
 
-/* Remove top padding */
+/* Remove default top padding */
 .block-container {
     padding-top: 0 !important;
 }
 
-/* App background */
+/* Dark app background */
 div[data-testid="stAppViewContainer"] {
     background-color: #0e1117;
 }
@@ -36,17 +36,17 @@ div[data-testid="stAppViewContainer"] {
 .login-wrapper {
     min-height: 100vh;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
 }
 
-/* Login card */
+/* Dark login card (NO WHITE BOX) */
 .login-box {
     width: 460px;
     padding: 36px;
     border-radius: 18px;
-    background: #f9f9f9;
-    box-shadow: 0 14px 40px rgba(0,0,0,0.25);
+    background: rgba(15, 23, 42, 0.96);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.45);
 }
 
 /* Logo */
@@ -55,18 +55,24 @@ div[data-testid="stAppViewContainer"] {
     margin-bottom: 14px;
 }
 
-/* Text */
+/* Title — FORCE WHITE */
 .title {
-    font-size: 30px;
+    font-size: 32px;
     font-weight: 700;
     text-align: center;
-    color: #111827;
+    color: #ffffff !important;
 }
 
+/* Subtitle */
 .subtitle {
     text-align: center;
-    color: #6b7280;
+    color: #cbd5f5;
     margin-bottom: 28px;
+}
+
+/* Inputs & labels */
+label, .stRadio label {
+    color: #e5e7eb !important;
 }
 
 </style>
@@ -108,7 +114,7 @@ with open("assets/qure_logo.png", "rb") as f:
 st.markdown('<div class="login-wrapper">', unsafe_allow_html=True)
 st.markdown('<div class="login-box">', unsafe_allow_html=True)
 
-# Logo replaces white box area
+# Logo replaces white spacer area
 st.markdown(f"""
 <div style="text-align:center;">
     <img src="data:image/png;base64,{logo_base64}" class="logo">
@@ -151,7 +157,11 @@ if mode == "📝 Register":
                     "Name": name,
                     "Phone_Number": phone
                 }
-                res = requests.post(f"{API_BASE}/user/patients", json=payload)
+                res = requests.post(
+                    f"{API_BASE}/user/patients",
+                    json=payload,
+                    timeout=15
+                )
                 if res.status_code in [200, 201]:
                     st.success("✅ Registration successful. Please Sign In.")
                 else:
