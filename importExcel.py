@@ -1,48 +1,88 @@
 from pymongo import MongoClient
-import math
+import random
 
-# 🔐 MongoDB connection
-MONGO_URI = "mongodb+srv://vishwavarshaa7_db_user:ZQYT2zUjdac4qJbG@cluster0.ogxvqwx.mongodb.net/"
-client = MongoClient(MONGO_URI)
+# ======================================
+# CONFIGURATION
+# ======================================
 
-db = client["quickmedic"]
-patients = db["patients"]
+# 🔐 SAME MongoDB URI used in backend
+MONGO_URI = "mongodb+srv://vishwavarshaa7_db_user:ZQYT2zUjdac4qJbG@cluster0.ogxvqwx.mongodb.net/quickmedic"
 
-# 🔁 Update all documents
-for patient in patients.find():
+DATABASE_NAME = None          # None = use DB from URI
+COLLECTION_NAME = "patients"
 
-    updates = {}
+# ======================================
+# RANDOM NAME DATA
+# ======================================
 
-    # Fix NaN values
-    for field in [
-        "Current_Medications",
-        "Recent_Surgeries",
-        "Drug_Allergies",
-        "Other_Allergies",
-        "Medical_Devices",
-        "Emergency_Status"
-    ]:
-        if field in patient and (
-            patient[field] is None or
-            patient[field] == "NaN" or
-            (isinstance(patient[field], float) and math.isnan(patient[field]))
-        ):
-            updates[field] = ""
+FIRST_NAMES = [
+    "Arjun", "Karthik", "Rohit", "Suresh", "Vikram",
+    "Anand", "Ramesh", "Prakash", "Naveen", "Santhosh",
+    "Aditi", "Priya", "Kavya", "Divya", "Meena",
+    "Anjali", "Pooja", "Keerthi", "Lakshmi", "Nithya"
+]
 
-    # Add new structured fields (if not present)
-    if "Medical_History" not in patient:
-        updates["Medical_History"] = []
+LAST_NAMES = [
+    "Kumar", "Sharma", "Reddy", "Iyer", "Nair",
+    "Patel", "Gupta", "Singh", "Das", "Rao",
+    "Menon", "Chatterjee", "Banerjee", "Malhotra"
+]
 
-    if "Uploaded_Files" not in patient:
-        updates["Uploaded_Files"] = []
+# ======================================
+# MIGRATION LOGIC
+# ======================================
 
-    if "Last_Updated" not in patient:
-        updates["Last_Updated"] = "system_migration"
+def generate_random_name():
+    return f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
 
-    if updates:
+def main():
+    client = MongoClient(MONGO_URI)
+
+    if DATABASE_NAME:
+        db = client[DATABASE_NAME]
+    else:
+        db = client.get_database()
+
+    patients = db[COLLECTION_NAME]
+
+    # 🔎 Find names like "Patient 1", "Patient 2", etc.
+    query = {
+        "Name": { "$regex": "^Patient\\s\\d+", "$options": "i" }
+    }
+
+    cursor = patients.find(query)
+
+    updated = 0
+
+    for patient in cursor:
+        new_name = generate_random_name()
+
         patients.update_one(
             {"_id": patient["_id"]},
-            {"$set": updates}
+            {
+                "$set": {
+                    "Name": new_name,
+                    "Last_Updated": "random_name_migration"
+                }
+            }
         )
 
-print("✅ Database migration completed successfully")
+        updated += 1
+        print(
+            f"Updated Patient_ID={patient.get('Patient_ID')} "
+            f"→ Name='{new_name}'"
+        )
+
+    print("\n======================================")
+    print("✅ NAME MIGRATION COMPLETED")
+    print(f"👤 Total patients updated: {updated}")
+    print("======================================\n")
+
+    client.close()
+
+# ======================================
+# ENTRY POINT
+# ======================================
+
+if __name__ == "__main__":
+    main()

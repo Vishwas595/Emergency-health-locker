@@ -7,6 +7,12 @@ const PatientSchema = new mongoose.Schema(
       required: true,
       unique: true
     },
+     Phone_Number: {
+      type: String,
+      required: false,
+      trim: true
+    },
+
 
     Name: { type: String },
     Date_of_Birth: { type: String },

@@ -19,6 +19,7 @@ const upload = multer({
 // ===============================
 // 1️⃣ UPLOAD MEDICAL RECORD
 // ===============================
+// Used by: USER (own records) & ADMIN
 router.post("/records/upload", upload.single("file"), async (req, res) => {
   try {
     const {
@@ -30,7 +31,7 @@ router.post("/records/upload", upload.single("file"), async (req, res) => {
 
     if (!Patient_ID || !Record_Type || !Record_Title || !req.file) {
       return res.status(400).json({
-        error: "Patient_ID, Record_Type, Record_Title and file are required"
+        message: "Patient_ID, Record_Type, Record_Title and file are required"
       });
     }
 
@@ -47,42 +48,54 @@ router.post("/records/upload", upload.single("file"), async (req, res) => {
 
     await record.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Medical record uploaded successfully",
       recordId: record._id
     });
-  } catch (err) {
-    console.error("Upload error:", err);
-    res.status(500).json({ error: "Upload failed" });
+
+  } catch (error) {
+    console.error("UPLOAD RECORD ERROR:", error);
+    return res.status(500).json({ message: "Upload failed" });
   }
 });
 
 // ===============================
 // 2️⃣ LIST RECORDS BY PATIENT ID
 // ===============================
+// Used by: USER (own ID) & ADMIN (any ID)
 router.get("/records/:patientId", async (req, res) => {
   try {
+    const { patientId } = req.params;
+
+    if (!patientId) {
+      return res.status(400).json({ message: "Patient ID required" });
+    }
+
     const records = await MedicalRecord.find(
-      { Patient_ID: req.params.patientId },
-      { File_Data: 0 } // ❌ exclude heavy binary
+      { Patient_ID: patientId },
+      { File_Data: 0 } // ❌ Exclude heavy binary data
     ).sort({ createdAt: -1 });
 
-    res.json(records);
-  } catch (err) {
-    console.error("Fetch error:", err);
-    res.status(500).json({ error: "Fetch failed" });
+    return res.status(200).json(records);
+
+  } catch (error) {
+    console.error("FETCH RECORDS ERROR:", error);
+    return res.status(500).json({ message: "Fetch failed" });
   }
 });
 
 // ===============================
 // 3️⃣ DOWNLOAD MEDICAL RECORD
 // ===============================
+// Used by: USER (own record) & ADMIN
 router.get("/records/download/:id", async (req, res) => {
   try {
-    const record = await MedicalRecord.findById(req.params.id);
+    const { id } = req.params;
+
+    const record = await MedicalRecord.findById(id);
 
     if (!record) {
-      return res.status(404).json({ error: "File not found" });
+      return res.status(404).json({ message: "File not found" });
     }
 
     res.set({
@@ -90,10 +103,11 @@ router.get("/records/download/:id", async (req, res) => {
       "Content-Disposition": `attachment; filename="${record.File_Name}"`
     });
 
-    res.send(record.File_Data);
-  } catch (err) {
-    console.error("Download error:", err);
-    res.status(500).json({ error: "Download failed" });
+    return res.send(record.File_Data);
+
+  } catch (error) {
+    console.error("DOWNLOAD RECORD ERROR:", error);
+    return res.status(500).json({ message: "Download failed" });
   }
 });
 

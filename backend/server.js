@@ -1,4 +1,11 @@
-// server.js
+// ===============================
+// ENV CONFIG (MUST BE FIRST)
+// ===============================
+require("dotenv").config();
+
+// ===============================
+// IMPORTS
+// ===============================
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -16,14 +23,29 @@ app.use(express.json());
 app.use(cors());
 
 // ===============================
-// ROOT ROUTE (Health Check)
+// ENV VALIDATION (CRITICAL)
+// ===============================
+if (!process.env.MONGO_URI) {
+  console.error("❌ MONGO_URI is missing. Check your .env file.");
+  process.exit(1); // ⛔ stop server immediately
+}
+
+if (!process.env.ADMIN_SECRET) {
+  console.error("❌ ADMIN_SECRET is missing. Check your .env file.");
+  process.exit(1);
+}
+
+console.log("🔐 ENV loaded successfully");
+
+// ===============================
+// HEALTH CHECK
 // ===============================
 app.get("/", (req, res) => {
   res.send("🚑 Emergency Health Locker Backend is Running");
 });
 
 // ===============================
-// ADMIN AUTH MIDDLEWARE
+// ADMIN AUTH
 // ===============================
 const adminAuth = (req, res, next) => {
   const adminKey = req.headers["x-admin-key"];
@@ -39,85 +61,199 @@ const adminAuth = (req, res, next) => {
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+  .catch((err) => {
+    console.error("❌ MongoDB connection failed:", err.message);
+    process.exit(1); // ⛔ stop server if DB fails
+  });
 
 // ===============================
-// MULTER CONFIG (IN-MEMORY)
+// MULTER CONFIG
 // ===============================
 const storage = multer.memoryStorage();
-
 const upload = multer({
   storage,
   limits: { fileSize: 15 * 1024 * 1024 } // 15MB
 });
 
-// ===============================
-// ADMIN ROUTES
-// ===============================
+// =====================================================
+// 🔒 ADMIN ROUTES
+// =====================================================
 
-// 🔒 Admin – Get ALL patients
+// Get ALL patients
 app.get("/api/patients", adminAuth, async (req, res) => {
   try {
     const patients = await Patient.find();
     res.json({ patients });
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "Failed to fetch patients" });
   }
 });
 
-// 🔒 Admin – Create NEW patient
+// Create NEW patient (Admin)
 app.post("/api/patients", adminAuth, async (req, res) => {
   try {
-    const patient = new Patient(req.body);
+    const {
+      Patient_ID,
+      Name,
+      Phone_Number,
+      Date_of_Birth,
+      Gender,
+      Blood_Type,
+      Emergency_Contacts,
+      Current_Medications,
+      Drug_Allergies,
+      Other_Allergies,
+      Recent_Surgeries,
+      Medical_Devices,
+      Emergency_Status,
+      Vital_Signs_Last_Recorded,
+      DNR_Status,
+      Organ_Donor
+    } = req.body;
+
+    if (!Patient_ID || !Name) {
+      return res.status(400).json({ error: "Patient_ID and Name required" });
+    }
+
+    const exists = await Patient.findOne({ Patient_ID });
+    if (exists) {
+      return res.status(409).json({ error: "Patient already exists" });
+    }
+
+    const patient = new Patient({
+      Patient_ID,
+      Name,
+      Phone_Number: Phone_Number || "",
+      Date_of_Birth,
+      Gender,
+      Blood_Type,
+      Emergency_Contacts,
+      Current_Medications,
+      Drug_Allergies,
+      Other_Allergies,
+      Recent_Surgeries,
+      Medical_Devices,
+      Emergency_Status,
+      Vital_Signs_Last_Recorded,
+      DNR_Status,
+      Organ_Donor
+    });
+
     await patient.save();
     res.status(201).json(patient);
-  } catch {
-    res.status(400).json({ error: "Failed to create patient" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to create patient" });
   }
 });
 
-// ===============================
-// USER ROUTES (PHASE 2A)
-// ===============================
-
-// 👤 User – Create OR Update patient
+// =====================================================
+// 👤 USER REGISTER / UPDATE
+// =====================================================
 app.post("/api/user/patients", async (req, res) => {
   try {
-    const patient = await Patient.findOneAndUpdate(
-      { Patient_ID: req.body.Patient_ID },
-      req.body,
-      { new: true, upsert: true }
-    );
+    const {
+      Patient_ID,
+      Name,
+      Phone_Number,
+      Date_of_Birth,
+      Gender,
+      Blood_Type,
+      Emergency_Contacts,
+      Current_Medications,
+      Drug_Allergies,
+      Other_Allergies,
+      Recent_Surgeries,
+      Medical_Devices,
+      Emergency_Status,
+      Vital_Signs_Last_Recorded
+    } = req.body;
+
+    if (!Patient_ID) {
+      return res.status(400).json({ error: "Patient_ID required" });
+    }
+
+    let patient = await Patient.findOne({ Patient_ID });
+
+    // REGISTER
+    if (!patient) {
+      if (!Name || !Phone_Number) {
+        return res.status(400).json({
+          error: "Name and Phone_Number required for registration"
+        });
+      }
+
+      patient = new Patient({
+        Patient_ID,
+        Name,
+        Phone_Number,
+        Date_of_Birth,
+        Gender,
+        Blood_Type,
+        Emergency_Contacts,
+        Current_Medications,
+        Drug_Allergies,
+        Other_Allergies,
+        Recent_Surgeries,
+        Medical_Devices,
+        Emergency_Status,
+        Vital_Signs_Last_Recorded
+      });
+
+      await patient.save();
+      return res.status(201).json(patient);
+    }
+
+    // UPDATE (SAFE)
+    patient.Name = Name ?? patient.Name;
+    patient.Phone_Number = Phone_Number ?? patient.Phone_Number;
+    patient.Date_of_Birth = Date_of_Birth ?? patient.Date_of_Birth;
+    patient.Gender = Gender ?? patient.Gender;
+    patient.Blood_Type = Blood_Type ?? patient.Blood_Type;
+    patient.Emergency_Contacts = Emergency_Contacts ?? patient.Emergency_Contacts;
+    patient.Current_Medications = Current_Medications ?? patient.Current_Medications;
+    patient.Drug_Allergies = Drug_Allergies ?? patient.Drug_Allergies;
+    patient.Other_Allergies = Other_Allergies ?? patient.Other_Allergies;
+    patient.Recent_Surgeries = Recent_Surgeries ?? patient.Recent_Surgeries;
+    patient.Medical_Devices = Medical_Devices ?? patient.Medical_Devices;
+    patient.Emergency_Status = Emergency_Status ?? patient.Emergency_Status;
+    patient.Vital_Signs_Last_Recorded =
+      Vital_Signs_Last_Recorded ?? patient.Vital_Signs_Last_Recorded;
+
+    await patient.save();
     res.status(200).json(patient);
-  } catch {
+
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to save patient" });
   }
 });
 
-// 👤 User/Admin – Get patient by ID
+// =====================================================
+// 👤 GET PATIENT BY ID
+// =====================================================
 app.get("/api/patients/:id", async (req, res) => {
   try {
     const patient = await Patient.findOne({ Patient_ID: req.params.id });
-    if (!patient) return res.status(404).json({ error: "Patient not found" });
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
     res.json(patient);
   } catch {
     res.status(500).json({ error: "Error fetching patient" });
   }
 });
 
-// ===============================
-// 📁 PHASE 2B – MEDICAL RECORD ROUTES
-// ===============================
-
-// 📤 Upload medical record
+// =====================================================
+// 📁 MEDICAL RECORDS
+// =====================================================
 app.post("/api/records/upload", upload.single("file"), async (req, res) => {
   try {
     const { Patient_ID, Record_Type, Record_Title, Uploaded_By } = req.body;
 
     if (!Patient_ID || !Record_Type || !Record_Title || !req.file) {
-      return res.status(400).json({
-        error: "Patient_ID, Record_Type, Record_Title and file are required"
-      });
+      return res.status(400).json({ error: "Missing fields" });
     }
 
     const record = new MedicalRecord({
@@ -132,18 +268,13 @@ app.post("/api/records/upload", upload.single("file"), async (req, res) => {
     });
 
     await record.save();
+    res.status(201).json({ message: "Uploaded", recordId: record._id });
 
-    res.status(201).json({
-      message: "Medical record uploaded successfully",
-      recordId: record._id
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to upload medical record" });
+  } catch {
+    res.status(500).json({ error: "Upload failed" });
   }
 });
 
-// 📂 List records by Patient_ID
 app.get("/api/records/:patientId", async (req, res) => {
   try {
     const records = await MedicalRecord.find(
@@ -153,17 +284,14 @@ app.get("/api/records/:patientId", async (req, res) => {
 
     res.json(records);
   } catch {
-    res.status(500).json({ error: "Failed to fetch records" });
+    res.status(500).json({ error: "Fetch failed" });
   }
 });
 
-// ⬇️ Download medical record
 app.get("/api/records/download/:id", async (req, res) => {
   try {
     const record = await MedicalRecord.findById(req.params.id);
-    if (!record) {
-      return res.status(404).json({ error: "File not found" });
-    }
+    if (!record) return res.status(404).json({ error: "File not found" });
 
     res.set({
       "Content-Type": record.File_Mime_Type,
@@ -172,13 +300,13 @@ app.get("/api/records/download/:id", async (req, res) => {
 
     res.send(record.File_Data);
   } catch {
-    res.status(500).json({ error: "Failed to download file" });
+    res.status(500).json({ error: "Download failed" });
   }
 });
 
-// ===============================
-// 🌍 PUBLIC EMERGENCY ROUTE
-// ===============================
+// =====================================================
+// 🌍 PUBLIC EMERGENCY ACCESS
+// =====================================================
 app.get("/api/public/:id", async (req, res) => {
   try {
     const patient = await Patient.findOne(
@@ -204,7 +332,7 @@ app.get("/api/public/:id", async (req, res) => {
 
     res.json(patient);
   } catch {
-    res.status(500).json({ error: "Error fetching emergency data" });
+    res.status(500).json({ error: "Emergency fetch failed" });
   }
 });
 
