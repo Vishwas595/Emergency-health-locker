@@ -8,7 +8,6 @@ const Patient = require("./models/Patient");
 const MedicalRecord = require("./models/MedicalRecord");
 
 const app = express();
-const upload = multer();
 
 // ===============================
 // BASIC MIDDLEWARE
@@ -28,7 +27,6 @@ app.get("/", (req, res) => {
 // ===============================
 const adminAuth = (req, res, next) => {
   const adminKey = req.headers["x-admin-key"];
-
   if (!adminKey || adminKey !== process.env.ADMIN_SECRET) {
     return res.status(401).json({ error: "Unauthorized admin access" });
   }
@@ -42,6 +40,16 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
+
+// ===============================
+// MULTER CONFIG (IN-MEMORY)
+// ===============================
+const storage = multer.memoryStorage();
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 15 * 1024 * 1024 } // 15MB
+});
 
 // ===============================
 // ADMIN ROUTES
@@ -86,7 +94,7 @@ app.post("/api/user/patients", async (req, res) => {
   }
 });
 
-// 👤 User/Admin – Get patient by ID (FULL DATA)
+// 👤 User/Admin – Get patient by ID
 app.get("/api/patients/:id", async (req, res) => {
   try {
     const patient = await Patient.findOne({ Patient_ID: req.params.id });
@@ -101,13 +109,15 @@ app.get("/api/patients/:id", async (req, res) => {
 // 📁 PHASE 2B – MEDICAL RECORD ROUTES
 // ===============================
 
-// 📤 Upload medical document
+// 📤 Upload medical record
 app.post("/api/records/upload", upload.single("file"), async (req, res) => {
   try {
     const { Patient_ID, Record_Type, Record_Title, Uploaded_By } = req.body;
 
     if (!Patient_ID || !Record_Type || !Record_Title || !req.file) {
-      return res.status(400).json({ error: "Missing required fields" });
+      return res.status(400).json({
+        error: "Patient_ID, Record_Type, Record_Title and file are required"
+      });
     }
 
     const record = new MedicalRecord({
@@ -115,14 +125,20 @@ app.post("/api/records/upload", upload.single("file"), async (req, res) => {
       Record_Type,
       Record_Title,
       File_Name: req.file.originalname,
-      File_Mime: req.file.mimetype,
+      File_Mime_Type: req.file.mimetype,
       File_Data: req.file.buffer,
+      File_Size: req.file.size,
       Uploaded_By: Uploaded_By || "User"
     });
 
     await record.save();
-    res.status(201).json({ message: "Medical record uploaded successfully" });
+
+    res.status(201).json({
+      message: "Medical record uploaded successfully",
+      recordId: record._id
+    });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to upload medical record" });
   }
 });
@@ -133,7 +149,7 @@ app.get("/api/records/:patientId", async (req, res) => {
     const records = await MedicalRecord.find(
       { Patient_ID: req.params.patientId },
       { File_Data: 0 }
-    ).sort({ Uploaded_At: -1 });
+    ).sort({ createdAt: -1 });
 
     res.json(records);
   } catch {
@@ -141,20 +157,22 @@ app.get("/api/records/:patientId", async (req, res) => {
   }
 });
 
-// ⬇️ Download record
+// ⬇️ Download medical record
 app.get("/api/records/download/:id", async (req, res) => {
   try {
     const record = await MedicalRecord.findById(req.params.id);
-    if (!record) return res.status(404).send("File not found");
+    if (!record) {
+      return res.status(404).json({ error: "File not found" });
+    }
 
     res.set({
-      "Content-Type": record.File_Mime,
+      "Content-Type": record.File_Mime_Type,
       "Content-Disposition": `attachment; filename="${record.File_Name}"`
     });
 
     res.send(record.File_Data);
   } catch {
-    res.status(500).send("Failed to download file");
+    res.status(500).json({ error: "Failed to download file" });
   }
 });
 
@@ -176,11 +194,14 @@ app.get("/api/public/:id", async (req, res) => {
         Drug_Allergies: 1,
         Current_Medications: 1,
         Medical_Devices: 1,
-        Recent_Surgeries: 1,
+        Recent_Surgeries: 1
       }
     );
 
-    if (!patient) return res.status(404).json({ error: "Patient not found" });
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
+
     res.json(patient);
   } catch {
     res.status(500).json({ error: "Error fetching emergency data" });
