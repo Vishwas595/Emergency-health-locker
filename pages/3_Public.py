@@ -232,4 +232,4 @@ with st.spinner("Loading emergency information..."):
         st.warning("Unable to connect to the medical database. Please try again.")
 
 st.divider()
-st.caption("Emergency Health Locker v1.0 | For Emergency Use Only")
+st.caption("QCURE v1.0 | For Emergency Use Only")

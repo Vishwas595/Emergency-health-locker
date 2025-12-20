@@ -282,4 +282,4 @@ if patient_id:
             mime="application/pdf"
         )
 
-st.caption("Emergency Health Locker • User Module • Phase 2B ✅ COMPLETE")
+st.caption("QCURE • User Module • Phase 2B ✅ COMPLETE")

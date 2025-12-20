@@ -1,142 +1,126 @@
 import streamlit as st
 import requests
-from utils.auth import check_admin_password, logout_admin
 
+# ===============================
+# PAGE CONFIG
+# ===============================
 st.set_page_config(
-    page_title="Admin Panel",
+    page_title="Admin Panel | QCURE",
     page_icon="🛠️",
     layout="wide"
 )
 
-# Check authentication first
-if not check_admin_password():
+# ===============================
+# ADMIN SECRET (SAFE LOAD)
+# ===============================
+if "ADMIN_SECRET" in st.secrets:
+    ADMIN_SECRET = st.secrets["ADMIN_SECRET"]
+else:
+    ADMIN_SECRET = "admin123"  # local fallback only
+
+HEADERS = {
+    "x-admin-key": ADMIN_SECRET
+}
+
+# ===============================
+# SESSION AUTH CHECK
+# ===============================
+if "logged_in" not in st.session_state or not st.session_state.logged_in:
+    st.error("❌ Please login first")
     st.stop()
 
-# If logged in, show admin panel
+if st.session_state.get("role") != "ADMIN":
+    st.error("❌ Unauthorized access")
+    st.stop()
+
+# ===============================
+# BACKEND URL
+# ===============================
 BACKEND_URL = "https://emergency-health-locker.onrender.com/api/patients"
 
+# ===============================
+# HEADER
+# ===============================
 st.title("🛠️ Admin Panel")
 st.markdown("### Manage Patient Records")
 
-# Logout button in top right
+# Logout
 col1, col2 = st.columns([6, 1])
 with col2:
-    logout_admin()
+    if st.button("🚪 Logout"):
+        st.session_state.logged_in = False
+        st.session_state.role = None
+        st.switch_page("pages/0_Login.py")
 
 st.divider()
 
-# Tabs for different admin functions
-tab1, tab2, tab3 = st.tabs(["➕ Add Patient", "📋 View Patients", "ℹ️ System Info"])
+# ===============================
+# TABS
+# ===============================
+tab1, tab2, tab3 = st.tabs(
+    ["➕ Add Patient", "📋 View Patients", "ℹ️ System Info"]
+)
 
-# TAB 1: Add New Patient
+# =====================================================
+# TAB 1: ADD PATIENT
+# =====================================================
 with tab1:
-    st.markdown("### Add New Patient")
-    
-    with st.form("add_patient_form", clear_on_submit=True):
-        st.markdown("**Basic Information**")
+    st.subheader("➕ Add New Patient")
+
+    with st.form("add_patient_form"):
         col1, col2, col3 = st.columns(3)
-        
+
         with col1:
-            patient_id = st.text_input(
-                "Patient ID*",
-                placeholder="P001",
-                help="Unique identifier (e.g., P001, P002)"
-            )
-            name = st.text_input(
-                "Full Name*",
-                placeholder="John Doe"
-            )
-            dob = st.date_input(
-                "Date of Birth",
-                help="Patient's date of birth"
-            )
-        
+            patient_id = st.text_input("Patient ID *", placeholder="P001")
+            name = st.text_input("Full Name *")
+
         with col2:
-            gender = st.selectbox(
-                "Gender",
-                ["Male", "Female", "Other"]
-            )
-            blood_type = st.selectbox(
-                "Blood Type",
+            dob = st.date_input("Date of Birth")
+            gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+
+        with col3:
+            blood = st.selectbox(
+                "Blood Group",
                 ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
             )
-            emergency_contact = st.text_input(
-                "Emergency Contact",
-                placeholder="Phone number"
-            )
-        
-        with col3:
-            emergency_status = st.text_area(
-                "Emergency Status/Alert",
-                placeholder="e.g., Diabetic, Severe allergy to penicillin",
-                height=100
-            )
-        
+            emergency_contact = st.text_input("Emergency Contact")
+
         st.divider()
-        st.markdown("**Medical Information**")
-        
+
         col4, col5 = st.columns(2)
-        
         with col4:
-            medications = st.text_area(
-                "Current Medications",
-                placeholder="List medications with dosage"
-            )
-            drug_allergies = st.text_area(
-                "Drug Allergies",
-                placeholder="List any drug allergies"
-            )
-        
+            medications = st.text_area("Current Medications")
+            drug_allergies = st.text_area("Drug Allergies")
+
         with col5:
-            other_allergies = st.text_area(
-                "Other Allergies",
-                placeholder="Food, environmental allergies"
-            )
-            surgeries = st.text_area(
-                "Recent Surgeries",
-                placeholder="List surgeries with dates"
-            )
-        
+            other_allergies = st.text_area("Other Allergies")
+            surgeries = st.text_area("Recent Surgeries")
+
         st.divider()
-        
+
         col6, col7 = st.columns(2)
-        
         with col6:
-            vital_signs = st.text_input(
-                "Last Vital Signs",
-                placeholder="BP: 120/80, Pulse: 72, Temp: 98.6"
-            )
-            medical_devices = st.text_input(
-                "Medical Devices",
-                placeholder="Pacemaker, Insulin pump, etc."
-            )
-        
+            vital_signs = st.text_input("Last Vital Signs")
+            devices = st.text_input("Medical Devices")
+
         with col7:
-            dnr_status = st.checkbox("DNR (Do Not Resuscitate)")
-            organ_donor = st.checkbox("Organ Donor")
-        
-        st.divider()
-        
-        # Submit button
-        col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 4])
-        
-        with col_btn1:
-            submitted = st.form_submit_button("💾 Save Patient", type="primary", use_container_width=True)
-        
-        with col_btn2:
-            st.form_submit_button("🔄 Clear Form", use_container_width=True)
-        
-        if submitted:
+            dnr = st.checkbox("DNR (Do Not Resuscitate)")
+            donor = st.checkbox("Organ Donor")
+
+        emergency_status = st.text_area("Emergency Alert / Condition")
+
+        submit = st.form_submit_button("💾 Save Patient")
+
+        if submit:
             if not patient_id or not name:
-                st.error("❌ Patient ID and Name are required!")
+                st.error("❌ Patient ID and Name are required")
             else:
-                # Prepare data
-                patient_data = {
+                payload = {
                     "Patient_ID": patient_id,
                     "Name": name,
-                    "Date_of_Birth": str(dob) if dob else "",
+                    "Date_of_Birth": str(dob),
                     "Gender": gender,
-                    "Blood_Type": blood_type,
+                    "Blood_Type": blood,
                     "Emergency_Contacts": emergency_contact,
                     "Emergency_Status": emergency_status,
                     "Current_Medications": medications or "None",
@@ -144,135 +128,94 @@ with tab1:
                     "Other_Allergies": other_allergies or "None",
                     "Recent_Surgeries": surgeries or "None",
                     "Vital_Signs_Last_Recorded": vital_signs,
-                    "Medical_Devices": medical_devices or "None",
-                    "DNR_Status": dnr_status,
-                    "Organ_Donor": organ_donor
+                    "Medical_Devices": devices or "None",
+                    "DNR_Status": dnr,
+                    "Organ_Donor": donor
                 }
-                
-                # Send to backend
-                try:
-                    with st.spinner("Saving patient..."):
-                        response = requests.post(BACKEND_URL, json=patient_data, timeout=10)
-                        
-                        if response.status_code == 201:
-                            st.success(f"✅ Patient {patient_id} added successfully!")
-                            st.balloons()
-                        elif response.status_code == 400:
-                            st.error("❌ Patient ID already exists. Please use a different ID.")
-                        else:
-                            st.error(f"⚠️ Error: {response.status_code}")
-                
-                except Exception as e:
-                    st.error(f"❌ Connection error: {str(e)}")
 
-# TAB 2: View All Patients
+                res = requests.post(
+                    BACKEND_URL,
+                    json=payload,
+                    headers=HEADERS,
+                    timeout=10
+                )
+
+                if res.status_code in [200, 201]:
+                    st.success("✅ Patient added successfully")
+                else:
+                    st.error(res.text)
+
+# =====================================================
+# TAB 2: VIEW PATIENTS (FIXED 🔥)
+# =====================================================
 with tab2:
-    st.markdown("### Registered Patients")
-    
-    if st.button("🔄 Refresh List"):
-        st.rerun()
-    
-    try:
-        with st.spinner("Loading patients..."):
-            response = requests.get(BACKEND_URL, timeout=10)
-            
-            if response.status_code == 200:
-                patients = response.json()
-                
-                if isinstance(patients, dict) and 'patients' in patients:
-                    patients = patients['patients']
-                
-                if patients:
-                    st.success(f"📊 Total Patients: {len(patients)}")
-                    
-                    # Search filter
-                    search = st.text_input("🔍 Search by ID or Name", "")
-                    
-                    if search:
-                        patients = [
-                            p for p in patients 
-                            if search.lower() in p.get('Patient_ID', '').lower() 
-                            or search.lower() in p.get('Name', '').lower()
-                        ]
-                    
-                    # Display as cards
-                    for i in range(0, len(patients), 3):
-                        cols = st.columns(3)
-                        
-                        for j in range(3):
-                            if i + j < len(patients):
-                                patient = patients[i + j]
-                                
-                                with cols[j]:
-                                    with st.container(border=True):
-                                        st.markdown(f"**{patient.get('Name', 'N/A')}**")
-                                        st.caption(f"ID: {patient.get('Patient_ID', 'N/A')}")
-                                        st.text(f"Blood: {patient.get('Blood_Type', 'N/A')}")
-                                        st.text(f"Gender: {patient.get('Gender', 'N/A')}")
-                                        
-                                        if patient.get('Emergency_Status'):
-                                            st.warning(f"⚠️ {patient['Emergency_Status'][:50]}...")
-                else:
-                    st.info("No patients registered yet.")
-            else:
-                st.error(f"Failed to load patients: {response.status_code}")
-    
-    except Exception as e:
-        st.error(f"❌ Error loading patients: {str(e)}")
+    st.subheader("📋 Registered Patients")
 
-# TAB 3: System Info
+    if st.button("🔄 Refresh"):
+        st.rerun()
+
+    res = requests.get(BACKEND_URL, headers=HEADERS, timeout=10)
+
+    if res.status_code == 200:
+        patients = res.json().get("patients", [])
+
+        if not patients:
+            st.info("No patients found")
+        else:
+            st.success(f"Total Patients: {len(patients)}")
+
+            search = st.text_input("🔍 Search by ID or Name")
+
+            # ✅ SAFE SEARCH (NO KeyError)
+            if search:
+                search = search.lower()
+                patients = [
+                    p for p in patients
+                    if search in (p.get("Patient_ID", "") or "").lower()
+                    or search in (p.get("Name", "") or "").lower()
+                ]
+
+            for p in patients:
+                with st.container(border=True):
+                    st.markdown(f"**{p.get('Name', 'Unknown')}**")
+                    st.caption(f"ID: {p.get('Patient_ID', 'N/A')}")
+                    st.text(f"Blood: {p.get('Blood_Type', '-')}")
+                    st.text(f"Gender: {p.get('Gender', '-')}")
+                    if p.get("Emergency_Status"):
+                        st.warning(p["Emergency_Status"])
+    else:
+        st.error("❌ Failed to load patients (Admin key missing or backend down)")
+
+# =====================================================
+# TAB 3: SYSTEM INFO
+# =====================================================
 with tab3:
-    st.markdown("### System Information")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.info("""
-        **Backend Status**
-        
-        - API: Render Cloud
-        - Database: MongoDB Atlas
-        - Status: ✅ Online
-        """)
-        
-        # Test backend
-        if st.button("🔧 Test Backend Connection"):
-            try:
-                response = requests.get("https://emergency-health-locker.onrender.com", timeout=5)
-                if response.status_code == 200:
-                    st.success("✅ Backend is responsive")
-                else:
-                    st.warning(f"⚠️ Backend returned: {response.status_code}")
-            except:
-                st.error("❌ Backend not responding")
-    
-    with col2:
-        st.info("""
-        **Frontend Status**
-        
-        - Platform: Streamlit Cloud
-        - Pages: 4 (Home, User, Admin, Public)
-        - Status: ✅ Online
-        """)
-        
-        st.markdown("""
-        **Features**
-        - ✅ Multi-page structure
-        - ✅ Admin authentication
-        - ✅ QR code generation
-        - ✅ NFC support
-        - ✅ PDF generation
-        """)
-    
-    st.divider()
-    
-    st.warning("""
-    **⚠️ Security Notes**
-    
-    - Default admin password is `admin123`
-    - Change this in production!
-    - Edit `utils/auth.py` to update
+    st.subheader("ℹ️ System Information")
+
+    st.info("""
+    **Backend**
+    - Node.js + Express
+    - MongoDB Atlas
+    - Hosted on Render
+
+    **Frontend**
+    - Streamlit Cloud
+    - Role-based access
+    - QR + NFC support
     """)
 
+    if st.button("🔧 Test Backend"):
+        try:
+            test = requests.get(
+                "https://emergency-health-locker.onrender.com",
+                timeout=5
+            )
+            if test.status_code == 200:
+                st.success("✅ Backend is live")
+            else:
+                st.error("❌ Backend issue")
+        except:
+            st.error("❌ Backend unreachable")
+
 st.divider()
-st.caption("Emergency Health Locker Admin Panel v1.0")
+st.caption("QCURE • Admin Module • Phase 4B ✅ COMPLETE")
