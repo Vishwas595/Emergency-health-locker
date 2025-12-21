@@ -1,90 +1,27 @@
 import streamlit as st
 import requests
-import base64
 
 # ===============================
-# PAGE CONFIG (CRITICAL)
+# PAGE CONFIG
 # ===============================
 st.set_page_config(
     page_title="Login | QURE",
     page_icon="🔐",
-    layout="wide"   # MUST be wide to avoid Streamlit spacer
+    layout="centered"
 )
 
-# ===============================
-# GLOBAL CSS (FINAL & CLEAN)
-# ===============================
+# Hide sidebar ONLY (safe)
 st.markdown("""
 <style>
-
-/* Hide Streamlit header + sidebar */
-header, footer, section[data-testid="stSidebar"] {
-    display: none !important;
-}
-
-/* Remove extra top padding */
-.block-container {
-    padding-top: 0rem !important;
-}
-
-/* Dark background */
-div[data-testid="stAppViewContainer"] {
-    background-color: #0e1117;
-}
-
-/* Center wrapper */
-.login-wrapper {
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* Login card */
-.login-box {
-    width: 460px;
-    padding: 36px;
-    border-radius: 18px;
-    background: rgba(15, 23, 42, 0.96);
-    box-shadow: 0 14px 40px rgba(0,0,0,0.45);
-}
-
-/* Logo */
-.logo {
-    width: 140px;
-    margin-bottom: 14px;
-}
-
-/* Title */
-.title {
-    font-size: 32px;
-    font-weight: 700;
-    text-align: center;
-    color: #ffffff !important;
-}
-
-/* Subtitle */
-.subtitle {
-    text-align: center;
-    color: #cbd5f5;
-    margin-bottom: 28px;
-}
-
-label {
-    color: #e5e7eb !important;
-}
-
+section[data-testid="stSidebar"] { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
-
 API_BASE = "https://emergency-health-locker.onrender.com/api"
+ # use Render URL when deployed
 
-# ===============================
-# ADMIN CREDENTIALS
-# ===============================
-ADMIN_ID = st.secrets.get("ADMIN_ID", "ADMIN001")
-ADMIN_PHONE = st.secrets.get("ADMIN_PHONE", "7397617895")
+ADMIN_ID = "ADMIN001"
+ADMIN_PHONE = "7397617895"
 
 # ===============================
 # SESSION INIT
@@ -103,29 +40,11 @@ if st.session_state.logged_in:
         st.switch_page("pages/1_User.py")
 
 # ===============================
-# LOAD LOGO
+# UI
 # ===============================
-with open("assets/qure_logo.png", "rb") as f:
-    logo_base64 = base64.b64encode(f.read()).decode()
+st.title("🔐 QURE")
+st.caption("Secure Medical Access")
 
-# ===============================
-# UI START
-# ===============================
-st.markdown('<div class="login-wrapper">', unsafe_allow_html=True)
-st.markdown('<div class="login-box">', unsafe_allow_html=True)
-
-# Logo replaces white spacer area
-st.markdown(f"""
-<div style="text-align:center;">
-    <img src="data:image/png;base64,{logo_base64}" class="logo">
-    <div class="title">QURE</div>
-    <div class="subtitle">Secure Medical Access</div>
-</div>
-""", unsafe_allow_html=True)
-
-# ===============================
-# MODE SELECT
-# ===============================
 mode = st.radio(
     "Choose an option",
     ["🔑 Sign In", "📝 Register"],
@@ -136,49 +55,41 @@ mode = st.radio(
 # REGISTER
 # ===============================
 if mode == "📝 Register":
-    st.subheader("📝 Register")
-
-    name = st.text_input("Full Name *")
-    patient_id = st.text_input("Patient ID *")
-    phone = st.text_input("Phone Number *")
+    name = st.text_input("Full Name")
+    patient_id = st.text_input("Patient ID")
+    phone = st.text_input("Phone Number")
 
     if st.button("Register"):
         if not name or not patient_id or not phone:
-            st.error("❌ All fields are required")
-        elif patient_id == ADMIN_ID:
-            st.error("❌ Admin cannot be registered")
+            st.error("All fields are required")
         else:
-            check = requests.get(f"{API_BASE}/patients/{patient_id}")
-            if check.status_code == 200:
-                st.error("❌ Patient already exists. Please Sign In.")
-            else:
-                payload = {
-                    "Patient_ID": patient_id,
-                    "Name": name,
-                    "Phone_Number": phone
-                }
+            try:
                 res = requests.post(
                     f"{API_BASE}/user/patients",
-                    json=payload,
-                    timeout=15
+                    json={
+                        "Patient_ID": patient_id,
+                        "Name": name,
+                        "Phone_Number": phone
+                    },
+                    timeout=5
                 )
                 if res.status_code in [200, 201]:
-                    st.success("✅ Registration successful. Please Sign In.")
+                    st.success("Registered successfully. Please sign in.")
                 else:
-                    st.error("❌ Registration failed")
+                    st.error("Registration failed")
+            except requests.exceptions.RequestException:
+                st.error("Backend not reachable")
 
 # ===============================
 # SIGN IN
 # ===============================
 if mode == "🔑 Sign In":
-    st.subheader("🔑 Sign In")
-
     entered_id = st.text_input("ID")
     phone = st.text_input("Phone Number")
 
     if st.button("Sign In"):
         if not entered_id or not phone:
-            st.error("❌ Both fields are required")
+            st.error("Both fields required")
             st.stop()
 
         # ADMIN
@@ -189,16 +100,21 @@ if mode == "🔑 Sign In":
 
         # USER
         else:
-            res = requests.get(f"{API_BASE}/patients/{entered_id}")
-            if res.status_code != 200:
-                st.error("❌ Invalid ID")
-            elif str(res.json().get("Phone_Number")) != phone:
-                st.error("❌ Incorrect phone number")
-            else:
-                st.session_state.logged_in = True
-                st.session_state.role = "USER"
-                st.session_state.patient_id = entered_id
-                st.switch_page("pages/1_User.py")
+            try:
+                res = requests.get(
+                    f"{API_BASE}/patients/{entered_id}",
+                    timeout=5
+                )
+                if res.status_code != 200:
+                    st.error("Invalid ID")
+                elif str(res.json().get("Phone_Number")) != phone:
+                    st.error("Incorrect phone number")
+                else:
+                    st.session_state.logged_in = True
+                    st.session_state.role = "USER"
+                    st.session_state.patient_id = entered_id
+                    st.switch_page("pages/1_User.py")
+            except requests.exceptions.RequestException:
+                st.error("Backend not reachable")
 
-st.markdown("</div></div>", unsafe_allow_html=True)
 st.caption("QURE © 2025")
