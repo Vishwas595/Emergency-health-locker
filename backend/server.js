@@ -10,11 +10,12 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const multer = require("multer");
+const QRCode = require("qrcode"); // 🔹 QR GENERATION
 
 const Patient = require("./models/Patient");
 const MedicalRecord = require("./models/MedicalRecord");
 
-// 🔴 PDF GENERATOR (THIS FIXES YOUR ISSUE)
+// 🔴 PDF GENERATOR
 const generateMedicalPDF = require("./utils/pdfGenerator");
 
 const app = express();
@@ -92,7 +93,7 @@ app.post("/api/user/patients", async (req, res) => {
     );
 
     res.status(200).json(patient);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to save patient" });
   }
 });
@@ -209,17 +210,13 @@ app.get("/api/public/:id", async (req, res) => {
 });
 
 // =====================================================
-// 📄 PDF DOWNLOAD (🔥 FIXED PART)
+// 📄 PDF DOWNLOAD
 // =====================================================
 app.get("/api/pdf/:id", async (req, res) => {
   try {
     const patient = await Patient.findOne({ Patient_ID: req.params.id });
+    if (!patient) return res.status(404).send("Patient not found");
 
-    if (!patient) {
-      return res.status(404).send("Patient not found");
-    }
-
-    // Create PDF using your pdfGenerator.js
     const pdfBuffer = await generateMedicalPDF(patient);
 
     res.setHeader("Content-Type", "application/pdf");
@@ -232,6 +229,25 @@ app.get("/api/pdf/:id", async (req, res) => {
   } catch (err) {
     console.error("PDF ERROR:", err);
     res.status(500).send("PDF generation failed");
+  }
+});
+
+// =====================================================
+// 🔳 QR CODE (FOR USER DASHBOARD)
+// =====================================================
+app.get("/api/qr/:id", async (req, res) => {
+  try {
+    const patientId = req.params.id;
+
+    const emergencyUrl =
+      `https://qure-jet.vercel.app/public.html?patient_id=${patientId}`;
+
+    const qr = await QRCode.toDataURL(emergencyUrl);
+
+    res.json({ qr });
+  } catch (err) {
+    console.error("QR ERROR:", err);
+    res.status(500).json({ error: "QR generation failed" });
   }
 });
 
