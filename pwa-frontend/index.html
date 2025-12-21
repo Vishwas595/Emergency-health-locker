@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>QURE | Login</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0d6efd">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <h1>🔐 QURE</h1>
+  <p>Secure Medical Access</p>
+
+  <div class="tabs">
+    <button onclick="showLogin()">Sign In</button>
+    <button onclick="showRegister()">Register</button>
+  </div>
+
+  <!-- LOGIN -->
+  <div id="loginBox">
+    <input id="loginId" placeholder="ID">
+    <input id="loginPhone" placeholder="Phone Number">
+    <button onclick="login()">Sign In</button>
+  </div>
+
+  <!-- REGISTER -->
+  <div id="registerBox" style="display:none">
+    <input id="regName" placeholder="Full Name">
+    <input id="regId" placeholder="Patient ID">
+    <input id="regPhone" placeholder="Phone Number">
+    <button onclick="register()">Register</button>
+  </div>
+
+  <p id="msg"></p>
+
+  <script src="js/login.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("service-worker.js");
+    }
+  </script>
+</body>
+</html>

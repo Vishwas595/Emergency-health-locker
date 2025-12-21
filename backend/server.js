@@ -14,6 +14,9 @@ const multer = require("multer");
 const Patient = require("./models/Patient");
 const MedicalRecord = require("./models/MedicalRecord");
 
+// 🔴 PDF GENERATOR (THIS FIXES YOUR ISSUE)
+const generateMedicalPDF = require("./utils/pdfGenerator");
+
 const app = express();
 
 // ===============================
@@ -23,33 +26,31 @@ app.use(express.json());
 app.use(cors());
 
 // ===============================
-// ENV VALIDATION (CRITICAL)
+// ENV VALIDATION
 // ===============================
 if (!process.env.MONGO_URI) {
-  console.error("❌ MONGO_URI is missing. Check your .env file.");
-  process.exit(1); // ⛔ stop server immediately
-}
-
-if (!process.env.ADMIN_SECRET) {
-  console.error("❌ ADMIN_SECRET is missing. Check your .env file.");
+  console.error("❌ MONGO_URI missing");
   process.exit(1);
 }
 
-console.log("🔐 ENV loaded successfully");
+if (!process.env.ADMIN_SECRET) {
+  console.error("❌ ADMIN_SECRET missing");
+  process.exit(1);
+}
 
 // ===============================
 // HEALTH CHECK
 // ===============================
 app.get("/", (req, res) => {
-  res.send("🚑 Emergency Health Locker Backend is Running");
+  res.send("🚑 Emergency Health Locker Backend Running");
 });
 
 // ===============================
 // ADMIN AUTH
 // ===============================
 const adminAuth = (req, res, next) => {
-  const adminKey = req.headers["x-admin-key"];
-  if (!adminKey || adminKey !== process.env.ADMIN_SECRET) {
+  const key = req.headers["x-admin-key"];
+  if (!key || key !== process.env.ADMIN_SECRET) {
     return res.status(401).json({ error: "Unauthorized admin access" });
   }
   next();
@@ -61,91 +62,17 @@ const adminAuth = (req, res, next) => {
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => {
-    console.error("❌ MongoDB connection failed:", err.message);
-    process.exit(1); // ⛔ stop server if DB fails
+  .catch(err => {
+    console.error("❌ MongoDB failed:", err.message);
+    process.exit(1);
   });
 
 // ===============================
-// MULTER CONFIG
+// MULTER (FILE UPLOAD)
 // ===============================
-const storage = multer.memoryStorage();
 const upload = multer({
-  storage,
-  limits: { fileSize: 15 * 1024 * 1024 } // 15MB
-});
-
-// =====================================================
-// 🔒 ADMIN ROUTES
-// =====================================================
-
-// Get ALL patients
-app.get("/api/patients", adminAuth, async (req, res) => {
-  try {
-    const patients = await Patient.find();
-    res.json({ patients });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch patients" });
-  }
-});
-
-// Create NEW patient (Admin)
-app.post("/api/patients", adminAuth, async (req, res) => {
-  try {
-    const {
-      Patient_ID,
-      Name,
-      Phone_Number,
-      Date_of_Birth,
-      Gender,
-      Blood_Type,
-      Emergency_Contacts,
-      Current_Medications,
-      Drug_Allergies,
-      Other_Allergies,
-      Recent_Surgeries,
-      Medical_Devices,
-      Emergency_Status,
-      Vital_Signs_Last_Recorded,
-      DNR_Status,
-      Organ_Donor
-    } = req.body;
-
-    if (!Patient_ID || !Name) {
-      return res.status(400).json({ error: "Patient_ID and Name required" });
-    }
-
-    const exists = await Patient.findOne({ Patient_ID });
-    if (exists) {
-      return res.status(409).json({ error: "Patient already exists" });
-    }
-
-    const patient = new Patient({
-      Patient_ID,
-      Name,
-      Phone_Number: Phone_Number || "",
-      Date_of_Birth,
-      Gender,
-      Blood_Type,
-      Emergency_Contacts,
-      Current_Medications,
-      Drug_Allergies,
-      Other_Allergies,
-      Recent_Surgeries,
-      Medical_Devices,
-      Emergency_Status,
-      Vital_Signs_Last_Recorded,
-      DNR_Status,
-      Organ_Donor
-    });
-
-    await patient.save();
-    res.status(201).json(patient);
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to create patient" });
-  }
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 }
 });
 
 // =====================================================
@@ -153,79 +80,19 @@ app.post("/api/patients", adminAuth, async (req, res) => {
 // =====================================================
 app.post("/api/user/patients", async (req, res) => {
   try {
-    const {
-      Patient_ID,
-      Name,
-      Phone_Number,
-      Date_of_Birth,
-      Gender,
-      Blood_Type,
-      Emergency_Contacts,
-      Current_Medications,
-      Drug_Allergies,
-      Other_Allergies,
-      Recent_Surgeries,
-      Medical_Devices,
-      Emergency_Status,
-      Vital_Signs_Last_Recorded
-    } = req.body;
-
-    if (!Patient_ID) {
+    const data = req.body;
+    if (!data.Patient_ID) {
       return res.status(400).json({ error: "Patient_ID required" });
     }
 
-    let patient = await Patient.findOne({ Patient_ID });
+    const patient = await Patient.findOneAndUpdate(
+      { Patient_ID: data.Patient_ID },
+      data,
+      { new: true, upsert: true }
+    );
 
-    // REGISTER
-    if (!patient) {
-      if (!Name || !Phone_Number) {
-        return res.status(400).json({
-          error: "Name and Phone_Number required for registration"
-        });
-      }
-
-      patient = new Patient({
-        Patient_ID,
-        Name,
-        Phone_Number,
-        Date_of_Birth,
-        Gender,
-        Blood_Type,
-        Emergency_Contacts,
-        Current_Medications,
-        Drug_Allergies,
-        Other_Allergies,
-        Recent_Surgeries,
-        Medical_Devices,
-        Emergency_Status,
-        Vital_Signs_Last_Recorded
-      });
-
-      await patient.save();
-      return res.status(201).json(patient);
-    }
-
-    // UPDATE (SAFE)
-    patient.Name = Name ?? patient.Name;
-    patient.Phone_Number = Phone_Number ?? patient.Phone_Number;
-    patient.Date_of_Birth = Date_of_Birth ?? patient.Date_of_Birth;
-    patient.Gender = Gender ?? patient.Gender;
-    patient.Blood_Type = Blood_Type ?? patient.Blood_Type;
-    patient.Emergency_Contacts = Emergency_Contacts ?? patient.Emergency_Contacts;
-    patient.Current_Medications = Current_Medications ?? patient.Current_Medications;
-    patient.Drug_Allergies = Drug_Allergies ?? patient.Drug_Allergies;
-    patient.Other_Allergies = Other_Allergies ?? patient.Other_Allergies;
-    patient.Recent_Surgeries = Recent_Surgeries ?? patient.Recent_Surgeries;
-    patient.Medical_Devices = Medical_Devices ?? patient.Medical_Devices;
-    patient.Emergency_Status = Emergency_Status ?? patient.Emergency_Status;
-    patient.Vital_Signs_Last_Recorded =
-      Vital_Signs_Last_Recorded ?? patient.Vital_Signs_Last_Recorded;
-
-    await patient.save();
     res.status(200).json(patient);
-
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: "Failed to save patient" });
   }
 });
@@ -242,6 +109,18 @@ app.get("/api/patients/:id", async (req, res) => {
     res.json(patient);
   } catch {
     res.status(500).json({ error: "Error fetching patient" });
+  }
+});
+
+// =====================================================
+// 🔒 ADMIN – GET ALL PATIENTS
+// =====================================================
+app.get("/api/patients", adminAuth, async (req, res) => {
+  try {
+    const patients = await Patient.find();
+    res.json({ patients });
+  } catch {
+    res.status(500).json({ error: "Failed to fetch patients" });
   }
 });
 
@@ -268,8 +147,7 @@ app.post("/api/records/upload", upload.single("file"), async (req, res) => {
     });
 
     await record.save();
-    res.status(201).json({ message: "Uploaded", recordId: record._id });
-
+    res.status(201).json({ message: "Uploaded", id: record._id });
   } catch {
     res.status(500).json({ error: "Upload failed" });
   }
@@ -280,8 +158,7 @@ app.get("/api/records/:patientId", async (req, res) => {
     const records = await MedicalRecord.find(
       { Patient_ID: req.params.patientId },
       { File_Data: 0 }
-    ).sort({ createdAt: -1 });
-
+    );
     res.json(records);
   } catch {
     res.status(500).json({ error: "Fetch failed" });
@@ -305,24 +182,19 @@ app.get("/api/records/download/:id", async (req, res) => {
 });
 
 // =====================================================
-// 🌍 PUBLIC EMERGENCY ACCESS
+// 🌍 PUBLIC EMERGENCY DATA
 // =====================================================
 app.get("/api/public/:id", async (req, res) => {
   try {
     const patient = await Patient.findOne(
       { Patient_ID: req.params.id },
       {
-        Patient_ID: 1,
         Name: 1,
-        Date_of_Birth: 1,
-        Gender: 1,
         Blood_Type: 1,
         Emergency_Contacts: 1,
         Emergency_Status: 1,
-        Drug_Allergies: 1,
         Current_Medications: 1,
-        Medical_Devices: 1,
-        Recent_Surgeries: 1
+        Drug_Allergies: 1
       }
     );
 
@@ -333,6 +205,33 @@ app.get("/api/public/:id", async (req, res) => {
     res.json(patient);
   } catch {
     res.status(500).json({ error: "Emergency fetch failed" });
+  }
+});
+
+// =====================================================
+// 📄 PDF DOWNLOAD (🔥 FIXED PART)
+// =====================================================
+app.get("/api/pdf/:id", async (req, res) => {
+  try {
+    const patient = await Patient.findOne({ Patient_ID: req.params.id });
+
+    if (!patient) {
+      return res.status(404).send("Patient not found");
+    }
+
+    // Create PDF using your pdfGenerator.js
+    const pdfBuffer = await generateMedicalPDF(patient);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename=Medical_${req.params.id}.pdf`
+    );
+
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error("PDF ERROR:", err);
+    res.status(500).send("PDF generation failed");
   }
 });
 

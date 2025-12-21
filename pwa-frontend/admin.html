@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel | QURE</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<h1>🛠️ Admin Panel</h1>
+<button onclick="logout()">🚪 Logout</button>
+
+<hr>
+
+<h3>Total Patients: <span id="count">0</span></h3>
+
+<input id="search" placeholder="Search by ID or Name" onkeyup="filterPatients()">
+
+<div id="patients"></div>
+
+<script src="js/admin.js"></script>
+</body>
+</html>
