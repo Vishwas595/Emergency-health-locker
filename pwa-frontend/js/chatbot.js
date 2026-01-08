@@ -11,39 +11,51 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // OPEN
-  toggle.addEventListener("click", () => {
+  // OPEN CHAT (click mascot OR image)
+  toggle.addEventListener("click", openChat);
+  toggle.querySelector("img")?.addEventListener("click", openChat);
+
+  function openChat() {
     chatbot.classList.remove("chatbot-hidden");
+  }
+
+  // CLOSE CHAT
+  closeBtn?.addEventListener("click", () => {
+    chatbot.classList.add("chatbot-hidden");
   });
 
-  // CLOSE
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      chatbot.classList.add("chatbot-hidden");
-    });
-  }
+  // SEND MESSAGE
+  sendBtn?.addEventListener("click", sendMessage);
+  input?.addEventListener("keydown", e => {
+    if (e.key === "Enter") sendMessage();
+  });
 
-  // SEND MESSAGE (UI only)
-  if (sendBtn && input) {
-    sendBtn.addEventListener("click", sendMessage);
-    input.addEventListener("keydown", e => {
-      if (e.key === "Enter") sendMessage();
-    });
-  }
-
-  function sendMessage() {
+  async function sendMessage() {
     const text = input.value.trim();
     if (!text) return;
 
     addBubble(text, "user");
     input.value = "";
 
-    setTimeout(() => {
-      addBubble(
-        "I can help you with your medical profile, allergies, blood group, and reports.",
-        "bot"
+    try {
+      const res = await fetch(
+        "https://emergency-health-locker.onrender.com/api/chatbot/message",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: text,
+            patientId: localStorage.getItem("patient_id")
+          })
+        }
       );
-    }, 600);
+
+      const data = await res.json();
+      addBubble(data.reply || "No response from assistant.", "bot");
+    } catch (err) {
+      console.error(err);
+      addBubble("⚠️ Chatbot service unavailable.", "bot");
+    }
   }
 
   function addBubble(text, type) {
