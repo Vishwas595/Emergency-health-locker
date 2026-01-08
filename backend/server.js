@@ -10,12 +10,16 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const multer = require("multer");
-const QRCode = require("qrcode"); // 🔹 QR GENERATION
+const QRCode = require("qrcode");
 
+// MODELS
 const Patient = require("./models/Patient");
 const MedicalRecord = require("./models/MedicalRecord");
 
-// 🔴 PDF GENERATOR
+// ROUTES
+const chatbotRoutes = require("./routes/chatbot");
+
+// PDF GENERATOR
 const generateMedicalPDF = require("./utils/pdfGenerator");
 
 const app = express();
@@ -250,6 +254,11 @@ app.get("/api/qr/:id", async (req, res) => {
     res.status(500).json({ error: "QR generation failed" });
   }
 });
+
+// =====================================================
+// 🤖 CHATBOT ROUTES (MODULAR)
+// =====================================================
+app.use("/api/chatbot", chatbotRoutes);
 
 // ===============================
 // START SERVER

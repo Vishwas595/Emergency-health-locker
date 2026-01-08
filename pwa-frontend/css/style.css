@@ -1,232 +1,318 @@
-/* =========================================================
-   GLOBAL RESET & BASE
-   ========================================================= */
+/* ======================================================
+   🔁 RESET
+   ====================================================== */
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
+
+/* ======================================================
+   🌐 LIVE MEDICAL BACKGROUND — ICU / EKG THEME
+   ====================================================== */
 
 body {
-  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  min-height: 100vh;
   padding: 20px;
-  font-family: Arial, Helvetica, sans-serif;
-  background-color: #ffffff;
-  color: #222;
+  color: #1e293b;
+
+  background: radial-gradient(circle at center, #020617, #000000);
+  position: relative;
+  overflow-x: hidden;
 }
 
-/* =========================================================
-   WATERMARK LOGO (ALL PAGES)
-   ========================================================= */
+/* EKG grid */
 body::before {
   content: "";
   position: fixed;
-  top: 50%;
-  left: 50%;
-  width: 300px;
-  height: 300px;
-  background-image: url("../icons/logo.png");
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-position: center;
-  opacity: 0.08;           /* watermark strength */
-  transform: translate(-50%, -50%);
-  z-index: -1;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 48px,
+      rgba(0,180,255,0.08) 50px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 48px,
+      rgba(0,180,255,0.05) 50px
+    );
+  animation: gridMove 20s linear infinite;
+  z-index: 0;
   pointer-events: none;
 }
 
-/* Mobile watermark resize */
-@media (max-width: 600px) {
-  body::before {
-    width: 200px;
-    height: 200px;
-  }
+/* Heartbeat sweep */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0,180,255,0.35),
+    transparent
+  );
+  animation: heartbeat 3.5s ease-in-out infinite;
+  z-index: 0;
+  pointer-events: none;
 }
 
-/* =========================================================
-   HEADINGS & TEXT
-   ========================================================= */
+@keyframes gridMove {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 800px 800px, 400px 400px; }
+}
+
+@keyframes heartbeat {
+  0% { opacity: .1; }
+  50% { opacity: .45; }
+  100% { opacity: .1; }
+}
+
+/* ======================================================
+   📦 MAIN CONTAINER
+   ====================================================== */
+
+.container {
+  max-width: 750px;
+  margin: 0 auto;
+  background: rgba(255,255,255,0.97);
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  position: relative;
+  z-index: 1;
+}
+
+/* ======================================================
+   🟦 LOGO (LOGIN PAGE)
+   ====================================================== */
+
+.logo-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.qure-logo {
+  width: 190px;
+  height: auto;
+  filter: drop-shadow(0 10px 24px rgba(2,6,23,.7));
+}
+
+/* ======================================================
+   🟦 TITLES — DARK MEDICAL BLUE
+   ====================================================== */
+
 h1 {
-  color: #0d6efd;
-  margin-bottom: 10px;
+  font-size: 32px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #020617, #1e3a8a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: .6px;
 }
 
 h2 {
-  color: #0d6efd;
-  margin-top: 30px;
+  margin-top: 32px;
+  font-size: 22px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #020617, #1e40af);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 h3 {
-  margin-bottom: 5px;
+  margin-top: 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e3a8a;
 }
 
 p {
-  margin: 6px 0;
+  text-align: center;
+  margin-top: 10px;
+  color: #334155;
 }
 
 hr {
-  margin: 25px 0;
   border: none;
-  border-top: 1px solid #ddd;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #94a3b8, transparent);
+  margin: 32px 0;
 }
 
-/* =========================================================
-   INPUTS & FORMS
-   ========================================================= */
+/* ======================================================
+   📋 FORMS
+   ====================================================== */
+
 input,
 select,
 textarea {
   width: 100%;
-  padding: 10px;
-  margin: 6px 0 12px 0;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: 14px;
+  margin: 8px 0 16px;
+  border-radius: 12px;
+  border: 2px solid #cbd5e1;
+  background: #f8fafc;
+  font-size: 15px;
 }
 
 textarea {
-  min-height: 80px;
-  resize: vertical;
+  min-height: 90px;
 }
 
-input[type="file"] {
-  padding: 6px;
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #1e40af;
+  background: #ffffff;
 }
 
-/* =========================================================
-   BUTTONS
-   ========================================================= */
+/* ======================================================
+   🔘 DARK MEDICAL BLUE BUTTONS (ALL PAGES)
+   ====================================================== */
+
 button {
-  background-color: #0d6efd;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #020617, #1e3a8a);
   color: #ffffff;
   border: none;
-  border-radius: 4px;
-  padding: 10px 14px;
-  font-size: 14px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
-  margin: 4px 0;
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.7);
 }
 
 button:hover {
-  background-color: #0b5ed7;
+  background: linear-gradient(135deg, #020617, #1e40af);
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.9);
 }
 
-button:disabled {
-  background-color: #999;
-  cursor: not-allowed;
+/* ======================================================
+   🩺 VERY BIG CHATBOT MASCOT
+   ====================================================== */
+
+#chatbot-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  z-index: 9999;
 }
 
-/* Secondary buttons (logout etc.) */
-button.secondary {
-  background-color: #6c757d;
+#chatbot-toggle img {
+  width: 260px;
+  height: auto;
+  display: block;
 }
 
-button.secondary:hover {
-  background-color: #5a6268;
+#chatbot-toggle:hover img {
+  transform: scale(1.05);
+  transition: transform .3s ease;
 }
 
-/* =========================================================
-   LINKS
-   ========================================================= */
-a {
-  color: #0d6efd;
-  text-decoration: none;
+/* ======================================================
+   💬 CHATBOT WINDOW
+   ====================================================== */
+
+#chatbot-container {
+  position: fixed;
+  bottom: 300px;
+  right: 32px;
+  width: 380px;
+  height: 480px;
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  display: flex;
+  flex-direction: column;
+  z-index: 10000;
 }
 
-a:hover {
-  text-decoration: underline;
+.chatbot-hidden {
+  display: none;
 }
 
-/* =========================================================
-   MESSAGES
-   ========================================================= */
-.success {
-  color: green;
-  font-weight: bold;
+#chatbot-header {
+  background: linear-gradient(135deg, #020617, #1e3a8a);
+  color: white;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.error {
-  color: red;
-  font-weight: bold;
+#chatbot-messages {
+  flex: 1;
+  padding: 14px;
+  background: #f1f5f9;
+  overflow-y: auto;
 }
 
-.warning {
-  color: #b02a37;
-  font-weight: bold;
+.chatbot-user span {
+  background: #1e3a8a;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 14px;
+  display: inline-block;
+  margin-bottom: 8px;
 }
 
-/* =========================================================
-   CARDS (Admin, Records, Lists)
-   ========================================================= */
-.card {
-  border: 1px solid #ddd;
-  border-radius: 6px;
+.chatbot-bot span {
+  background: #ffffff;
+  color: #1e293b;
+  padding: 8px 14px;
+  border-radius: 14px;
+  display: inline-block;
+  margin-bottom: 8px;
+  border: 1px solid #cbd5e1;
+}
+
+#chatbot-input-area {
+  display: flex;
+  border-top: 1px solid #cbd5e1;
+}
+
+#chatbot-input {
+  flex: 1;
   padding: 12px;
-  margin: 12px 0;
-  background-color: #fafafa;
+  border: none;
 }
 
-/* =========================================================
-   RECORD LIST
-   ========================================================= */
-.record {
-  padding: 8px 0;
-  border-bottom: 1px solid #ddd;
+#chatbot-send {
+  background: #020617;
+  color: white;
+  border: none;
+  padding: 0 20px;
 }
 
-.record:last-child {
-  border-bottom: none;
-}
+/* ======================================================
+   📱 RESPONSIVE
+   ====================================================== */
 
-/* =========================================================
-   LOGIN PAGE
-   ========================================================= */
-.tabs {
-  margin-bottom: 20px;
-}
-
-.tabs button {
-  margin-right: 8px;
-}
-
-/* =========================================================
-   ADMIN PAGE
-   ========================================================= */
-.admin-card {
-  background-color: #f9f9f9;
-}
-
-/* =========================================================
-   EMERGENCY / PUBLIC PAGE
-   ========================================================= */
-body.emergency {
-  background-color: #fff7f7;
-}
-
-body.emergency::before {
-  opacity: 0.04;
-}
-
-.emergency-text {
-  color: red;
-  font-weight: bold;
-}
-
-/* =========================================================
-   RESPONSIVE LAYOUT
-   ========================================================= */
 @media (max-width: 768px) {
-  body {
-    padding: 15px;
+  #chatbot-toggle img {
+    width: 200px;
   }
 
-  h1 {
-    font-size: 22px;
+  #chatbot-container {
+    width: calc(100vw - 32px);
+    right: 16px;
+    bottom: 260px;
   }
 
-  h2 {
-    font-size: 18px;
-  }
-
-  button {
-    width: 100%;
+  .qure-logo {
+    width: 160px;
   }
 }

@@ -34,7 +34,7 @@ async function loadProfile() {
   vitals.value = p.Vital_Signs_Last_Recorded || "";
   devices.value = p.Medical_Devices || "";
 
-  loadEmergency();
+  loadEmergency();   // 🔹 FIXED
   loadRecords();
 }
 
@@ -121,13 +121,37 @@ async function loadRecords() {
   });
 }
 
-// ================= EMERGENCY =================
-function loadEmergency() {
-  qrImage.src = `${API_BASE}/qr/${patientId}`;
-  publicLink.innerText =
-    `${window.location.origin}/public.html?patient_id=${patientId}`;
+// ================= EMERGENCY (🔥 FIXED) =================
+async function loadEmergency() {
+  // 1️⃣ Set emergency link
+  const link =
+    `https://qure-jet.vercel.app/public.html?patient_id=${patientId}`;
+
+  emergencyLink.value = link;
+
+  // 2️⃣ Load QR from backend (JSON → image)
+  try {
+    const res = await fetch(`${API_BASE}/qr/${patientId}`);
+    if (!res.ok) throw new Error("QR API failed");
+
+    const data = await res.json();
+    qrImage.src = data.qr;
+    qrMsg.innerText = "";
+  } catch (err) {
+    qrMsg.innerText = "⚠️ QR code could not be loaded";
+    console.error(err);
+  }
 }
 
+// ================= COPY EMERGENCY LINK =================
+function copyEmergencyLink() {
+  emergencyLink.select();
+  emergencyLink.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(emergencyLink.value);
+  alert("✅ Emergency link copied");
+}
+
+// ================= PDF =================
 function downloadPDF() {
   window.open(`${API_BASE}/pdf/${patientId}`, "_blank");
 }

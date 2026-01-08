@@ -1,21 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Emergency Medical Info | QURE</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css" />
 </head>
+
 <body>
+  <div class="container">
 
-<h1>🚑 Emergency Medical Information</h1>
-<p style="color:red"><b>For emergency use only</b></p>
+    <!-- HEADER -->
+    <h1>🚑 QURE – Emergency Medical Access</h1>
+    <p style="color:#e53e3e; font-weight:600; text-align:center;">
+      ⚠️ For emergency use only – Patient consent assumed
+    </p>
 
-<div id="content">
-  <p>Loading emergency data...</p>
-</div>
+    <hr />
 
-<button id="pdfBtn" style="display:none">📄 Download Medical PDF</button>
+    <!-- EMERGENCY CONTENT -->
+    <div id="content">
+      <p style="text-align:center;">⏳ Loading emergency medical data...</p>
+    </div>
 
-<script src="js/public.js"></script>
+    <hr />
+
+    <!-- PDF DOWNLOAD -->
+    <button
+      id="pdfBtn"
+      style="display:none; width:100%;"
+    >
+      📄 Download Emergency Medical PDF
+    </button>
+
+    <!-- DISCLAIMER -->
+    <p style="font-size:13px; opacity:0.8; margin-top:20px;">
+      🔒 This page shows only critical, non-sensitive medical information
+      required for first responders. Full records remain protected.
+    </p>
+
+  </div>
+
+  <!-- PUBLIC PAGE LOGIC -->
+  <script src="js/public.js"></script>
 </body>
 </html>

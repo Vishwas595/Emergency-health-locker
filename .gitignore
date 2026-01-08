@@ -1,10 +1,57 @@
-# Node
+# ===============================
+# Node / Express
+# ===============================
 node_modules/
 backend/node_modules/
+npm-debug.log*
+yarn-error.log*
 
-# Python
+# ===============================
+# Environment & Secrets
+# ===============================
+.env
+.env.local
+.env*.local
+.vercel
+
+# ===============================
+# Python / AI (BioBERT)
+# ===============================
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# Env
-.env
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# ===============================
+# ML Models / Weights
+# ===============================
+*.bin
+*.pt
+*.onnx
+*.h5
+
+# ===============================
+# Logs
+# ===============================
+logs/
+*.log
+
+# ===============================
+# OS / Editor
+# ===============================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ===============================
+# Build / Cache
+# ===============================
+dist/
+build/
+.cache/

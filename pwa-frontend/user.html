@@ -6,75 +6,29 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div class="container">
+    <h1>👤 USER DASHBOARD</h1>
+    <button>🚪 Logout</button>
 
-<h1>👤 User Dashboard</h1>
-<button onclick="logout()">🚪 Logout</button>
+    <hr>
 
-<hr>
+    <h2>✏️ Medical Profile</h2>
+    <input placeholder="Full Name">
+    <input type="date">
+    <select>
+      <option>Male</option>
+      <option>Female</option>
+      <option>Other</option>
+    </select>
 
-<!-- ================= PROFILE ================= -->
-<h2>✏️ Medical Profile</h2>
+    <input placeholder="Blood Group">
+    <textarea placeholder="Current Medications"></textarea>
 
-<input id="name" placeholder="Full Name">
-<input id="dob" type="date">
+    <button>💾 Save Profile</button>
+  </div>
 
-<select id="gender">
-  <option>Male</option>
-  <option>Female</option>
-  <option>Other</option>
-</select>
-
-<input id="blood" placeholder="Blood Group">
-<input id="emergency_contact" placeholder="Emergency Contact">
-
-<textarea id="medications" placeholder="Current Medications"></textarea>
-<textarea id="drug_allergies" placeholder="Drug Allergies"></textarea>
-<textarea id="other_allergies" placeholder="Other Allergies"></textarea>
-
-<textarea id="surgeries" placeholder="Recent Surgeries"></textarea>
-<input id="emergency_status" placeholder="Emergency Alert / Condition">
-<input id="vitals" placeholder="Last Vital Signs">
-<input id="devices" placeholder="Medical Devices">
-
-<button onclick="saveProfile()">💾 Save Profile</button>
-<p id="profileMsg"></p>
-
-<hr>
-
-<!-- ================= RECORD UPLOAD ================= -->
-<h2>📤 Upload Medical Record</h2>
-
-<select id="recordType">
-  <option>Lab Report</option>
-  <option>Prescription</option>
-  <option>Medical Report</option>
-  <option>Scan</option>
-  <option>Other</option>
-</select>
-
-<input id="recordTitle" placeholder="Record Title">
-<input id="recordFile" type="file">
-
-<button onclick="uploadRecord()">⬆️ Upload Record</button>
-<p id="uploadMsg"></p>
-
-<hr>
-
-<!-- ================= RECORD LIST ================= -->
-<h2>📂 Uploaded Medical Records</h2>
-<div id="records"></div>
-
-<hr>
-
-<!-- ================= EMERGENCY ================= -->
-<h2>🚑 Emergency Access</h2>
-
-<img id="qrImage" width="220">
-<p><strong>Public Emergency Link:</strong></p>
-<p id="publicLink"></p>
-
-<button onclick="downloadPDF()">📄 Download Medical PDF</button>
-
-<script src="js/user.js"></script>
+  <div id="chatbot-toggle">
+    <img src="icons/medical-mascot.png" alt="Medical Assistant">
+  </div>
 </body>
 </html>
