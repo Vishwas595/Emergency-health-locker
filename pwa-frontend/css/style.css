@@ -1,6 +1,4 @@
-/* ======================================================
-   🔁 RESET
-   ====================================================== */
+/* ================= RESET & BASE ================= */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -8,68 +6,108 @@
 }
 
 /* ======================================================
-   🌐 LIVE MEDICAL BACKGROUND — ICU / EKG THEME
+   🔵 TECH MEDICAL BACKGROUND (Dark Blue/Cyan)
    ====================================================== */
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
   min-height: 100vh;
+  color: #e2e8f0;
   padding: 20px;
-  color: #1e293b;
+  line-height: 1.6;
 
-  background: radial-gradient(circle at center, #020617, #000000);
+  /* Deep dark blue gradient with cyan accents */
+  background: linear-gradient(
+    135deg,
+    #0a1628 0%,
+    #0f172a 25%,
+    #1e293b 50%,
+    #0c4a6e 75%,
+    #0e1a2b 100%
+  );
+
   position: relative;
   overflow-x: hidden;
 }
 
-/* EKG grid */
+/* Fine tech grid pattern */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background:
-    repeating-linear-gradient(
-      90deg,
-      transparent 0,
-      transparent 48px,
-      rgba(0,180,255,0.08) 50px
-    ),
+
+  background-image:
     repeating-linear-gradient(
       0deg,
-      transparent 0,
-      transparent 48px,
-      rgba(0,180,255,0.05) 50px
+      transparent,
+      transparent 2px,
+      rgba(6, 182, 212, 0.15) 2px,
+      rgba(6, 182, 212, 0.15) 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(6, 182, 212, 0.15) 2px,
+      rgba(6, 182, 212, 0.15) 3px
     );
-  animation: gridMove 20s linear infinite;
+
+  background-size: 30px 30px;
+  animation: techScan 20s linear infinite;
   z-index: 0;
   pointer-events: none;
 }
 
-/* Heartbeat sweep */
+/* Scanning line effect with glow */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(0,180,255,0.35),
-    transparent
-  );
-  animation: heartbeat 3.5s ease-in-out infinite;
+
+  background: 
+    linear-gradient(
+      180deg,
+      transparent 40%,
+      rgba(6, 182, 212, 0.3) 50%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse at center,
+      rgba(6, 182, 212, 0.2),
+      transparent 70%
+    );
+
+  animation: scanLine 4s linear infinite;
   z-index: 0;
   pointer-events: none;
 }
 
-@keyframes gridMove {
-  from { background-position: 0 0, 0 0; }
-  to   { background-position: 800px 800px, 400px 400px; }
+/* ================= ANIMATIONS ================= */
+
+@keyframes techScan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 600px 600px;
+  }
 }
 
-@keyframes heartbeat {
-  0% { opacity: .1; }
-  50% { opacity: .45; }
-  100% { opacity: .1; }
+@keyframes scanLine {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
 }
 
 /* ======================================================
@@ -79,147 +117,200 @@ body::after {
 .container {
   max-width: 750px;
   margin: 0 auto;
-  background: rgba(255,255,255,0.97);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(6, 182, 212, 0.3);
   border-radius: 24px;
   padding: 40px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(6, 182, 212, 0.1);
   position: relative;
   z-index: 1;
+  backdrop-filter: blur(10px);
 }
 
-/* ======================================================
-   🟦 LOGO (LOGIN PAGE)
-   ====================================================== */
-
-.logo-wrapper {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 12px;
-}
-
-.qure-logo {
-  width: 190px;
-  height: auto;
-  filter: drop-shadow(0 10px 24px rgba(2,6,23,.7));
-}
-
-/* ======================================================
-   🟦 TITLES — DARK MEDICAL BLUE
-   ====================================================== */
+/* ================= HEADINGS ================= */
 
 h1 {
   font-size: 32px;
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 12px;
-  background: linear-gradient(135deg, #020617, #1e3a8a);
+  background: linear-gradient(135deg, #06b6d4, #0ea5e9, #3b82f6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  letter-spacing: .6px;
+  text-align: center;
+  margin-bottom: 12px;
+  text-shadow: 0 0 30px rgba(6, 182, 212, 0.5);
 }
 
 h2 {
   margin-top: 32px;
   font-size: 22px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #020617, #1e40af);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #06b6d4;
+  border-bottom: 2px solid rgba(6, 182, 212, 0.3);
+  padding-bottom: 8px;
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
 }
 
 h3 {
   margin-top: 20px;
   font-size: 18px;
-  font-weight: 600;
-  color: #1e3a8a;
+  color: #94a3b8;
 }
 
-p {
-  text-align: center;
-  margin-top: 10px;
-  color: #334155;
-}
+/* ================= DIVIDER ================= */
 
 hr {
   border: none;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #94a3b8, transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(6, 182, 212, 0.5),
+    transparent
+  );
   margin: 32px 0;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
 }
 
-/* ======================================================
-   📋 FORMS
-   ====================================================== */
+/* ================= FORM ELEMENTS ================= */
 
 input,
 select,
 textarea {
   width: 100%;
   padding: 14px;
-  margin: 8px 0 16px;
+  margin-top: 8px;
+  margin-bottom: 16px;
   border-radius: 12px;
-  border: 2px solid #cbd5e1;
-  background: #f8fafc;
+  border: 2px solid rgba(6, 182, 212, 0.3);
+  background: rgba(15, 23, 42, 0.8);
+  color: #e2e8f0;
   font-size: 15px;
+  transition: all 0.3s;
 }
 
 textarea {
   min-height: 90px;
+  resize: vertical;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
   outline: none;
-  border-color: #1e40af;
-  background: #ffffff;
+  border-color: #06b6d4;
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 
+    0 0 0 3px rgba(6, 182, 212, 0.2),
+    0 0 20px rgba(6, 182, 212, 0.3);
 }
 
-/* ======================================================
-   🔘 DARK MEDICAL BLUE BUTTONS (ALL PAGES)
-   ====================================================== */
+input::placeholder,
+textarea::placeholder {
+  color: #64748b;
+}
+
+/* ================= BUTTONS ================= */
 
 button {
   padding: 14px 20px;
-  background: linear-gradient(135deg, #020617, #1e3a8a);
-  color: #ffffff;
-  border: none;
+  background: linear-gradient(135deg, #0284c7, #06b6d4);
+  color: #fff;
+  border: 1px solid rgba(6, 182, 212, 0.5);
   border-radius: 12px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.7);
+  margin-top: 8px;
+  transition: all 0.3s;
+  width: 100%;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
 }
 
 button:hover {
-  background: linear-gradient(135deg, #020617, #1e40af);
-  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.9);
+  background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(6, 182, 212, 0.5);
+  border-color: #06b6d4;
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* ================= MESSAGES ================= */
+
+p {
+  margin-top: 10px;
+  text-align: center;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.success {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.error {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.info {
+  color: #7dd3fc;
+  background: rgba(14, 165, 233, 0.2);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+/* ================= QR CODE ================= */
+
+#qrImage {
+  display: block;
+  margin: 20px auto;
+  background: rgba(15, 23, 42, 0.9);
+  padding: 12px;
+  border: 2px solid rgba(6, 182, 212, 0.4);
+  border-radius: 16px;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    0 0 30px rgba(6, 182, 212, 0.2);
 }
 
 /* ======================================================
-   🩺 VERY BIG CHATBOT MASCOT
+   💬 CHATBOT TOGGLE BUTTON
    ====================================================== */
 
 #chatbot-toggle {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background: none;
-  border: none;
-  padding: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7, #06b6d4);
+  color: #fff;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  z-index: 9999;
+  box-shadow: 
+    0 6px 20px rgba(6, 182, 212, 0.4),
+    0 0 30px rgba(6, 182, 212, 0.3);
+  z-index: 2000;
+  transition: all 0.3s;
+  border: 2px solid rgba(6, 182, 212, 0.5);
+  padding: 0;
 }
 
-#chatbot-toggle img {
-  width: 260px;
-  height: auto;
-  display: block;
-}
-
-#chatbot-toggle:hover img {
-  transform: scale(1.05);
-  transition: transform .3s ease;
+#chatbot-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 
+    0 8px 25px rgba(6, 182, 212, 0.6),
+    0 0 40px rgba(6, 182, 212, 0.5);
+  background: linear-gradient(135deg, #0ea5e9, #22d3ee);
 }
 
 /* ======================================================
@@ -228,91 +319,219 @@ button:hover {
 
 #chatbot-container {
   position: fixed;
-  bottom: 300px;
-  right: 32px;
-  width: 380px;
-  height: 480px;
-  background: #ffffff;
-  border-radius: 18px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  bottom: 96px;
+  right: 24px;
+  width: 340px;
+  height: 420px;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  border-radius: 16px;
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(6, 182, 212, 0.2);
   display: flex;
   flex-direction: column;
-  z-index: 10000;
+  z-index: 2000;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
 }
 
 .chatbot-hidden {
-  display: none;
+  display: none !important;
 }
 
+/* ================= CHAT HEADER ================= */
+
 #chatbot-header {
-  background: linear-gradient(135deg, #020617, #1e3a8a);
+  background: linear-gradient(135deg, #0284c7, #06b6d4);
   color: white;
-  padding: 14px;
+  padding: 16px;
+  border-radius: 16px 16px 0 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-weight: 500;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+  border-bottom: 1px solid rgba(6, 182, 212, 0.3);
 }
+
+#chatbot-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+#chatbot-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* ================= CHAT MESSAGES ================= */
 
 #chatbot-messages {
   flex: 1;
-  padding: 14px;
-  background: #f1f5f9;
+  padding: 16px;
   overflow-y: auto;
+  font-size: 14px;
+  background: rgba(15, 23, 42, 0.6);
 }
 
-.chatbot-user span {
-  background: #1e3a8a;
+.chatbot-message {
+  margin-bottom: 12px;
+  display: flex;
+}
+
+.chatbot-user {
+  justify-content: flex-end;
+}
+
+.chatbot-user .message-bubble {
+  background: linear-gradient(135deg, #0284c7, #06b6d4);
   color: white;
-  padding: 8px 14px;
-  border-radius: 14px;
-  display: inline-block;
-  margin-bottom: 8px;
+  padding: 10px 14px;
+  border-radius: 18px 18px 4px 18px;
+  max-width: 80%;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+  border: 1px solid rgba(6, 182, 212, 0.3);
 }
 
-.chatbot-bot span {
-  background: #ffffff;
-  color: #1e293b;
-  padding: 8px 14px;
-  border-radius: 14px;
-  display: inline-block;
-  margin-bottom: 8px;
-  border: 1px solid #cbd5e1;
+.chatbot-bot {
+  justify-content: flex-start;
 }
+
+.chatbot-bot .message-bubble {
+  background: rgba(30, 41, 59, 0.9);
+  color: #e2e8f0;
+  padding: 10px 14px;
+  border-radius: 18px 18px 18px 4px;
+  max-width: 80%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+/* ================= CHAT INPUT AREA ================= */
 
 #chatbot-input-area {
   display: flex;
-  border-top: 1px solid #cbd5e1;
+  border-top: 1px solid rgba(6, 182, 212, 0.3);
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.9);
 }
 
 #chatbot-input {
   flex: 1;
-  padding: 12px;
-  border: none;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  padding: 12px 16px;
+  border-radius: 24px;
+  background: rgba(30, 41, 59, 0.8);
+  color: #e2e8f0;
+  font-size: 14px;
+  outline: none;
+  margin: 0;
+  transition: all 0.3s;
+}
+
+#chatbot-input::placeholder {
+  color: #64748b;
+}
+
+#chatbot-input:focus {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
 }
 
 #chatbot-send {
-  background: #020617;
+  background: linear-gradient(135deg, #0284c7, #06b6d4);
   color: white;
-  border: none;
-  padding: 0 20px;
+  border: 1px solid rgba(6, 182, 212, 0.5);
+  padding: 12px 20px;
+  margin-left: 8px;
+  margin-top: 0;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  width: auto;
+  min-width: 60px;
+  transition: all 0.3s;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+}
+
+#chatbot-send:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+}
+
+#chatbot-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* ======================================================
-   📱 RESPONSIVE
+   📱 RESPONSIVE DESIGN
    ====================================================== */
 
 @media (max-width: 768px) {
-  #chatbot-toggle img {
-    width: 200px;
+  body {
+    padding: 10px;
+  }
+
+  .container {
+    margin: 10px;
+    padding: 24px;
+    border-radius: 16px;
   }
 
   #chatbot-container {
-    width: calc(100vw - 32px);
-    right: 16px;
-    bottom: 260px;
+    width: calc(100vw - 48px);
+    height: 60vh;
+    right: 24px;
+    left: 24px;
+    bottom: 96px;
   }
 
-  .qure-logo {
-    width: 160px;
+  h1 {
+    font-size: 26px;
   }
+
+  button {
+    padding: 16px;
+  }
+
+  #chatbot-toggle {
+    bottom: 20px;
+    right: 20px;
+  }
+}
+
+/* ================= SCROLLBAR STYLING ================= */
+
+#chatbot-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+#chatbot-messages::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+#chatbot-messages::-webkit-scrollbar-thumb {
+  background: rgba(6, 182, 212, 0.5);
+  border-radius: 3px;
+}
+
+#chatbot-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.7);
 }

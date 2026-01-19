@@ -12,7 +12,7 @@ const MedicalRecord = require("../models/MedicalRecord");
 function detectIntent(message) {
   const msg = message
     .toLowerCase()
-    .replace(/[^a-z\s]/g, "");
+    .replace(/[^a-z0-9\s]/g, ""); // keep letters, numbers, spaces
 
   if (
     msg.includes("blood") ||
@@ -31,7 +31,8 @@ function detectIntent(message) {
 
   if (
     msg.includes("medicine") ||
-    msg.includes("medication")
+    msg.includes("medication") ||
+    msg.includes("medicines")
   ) {
     return "GET_MEDICATIONS";
   }
@@ -80,10 +81,11 @@ router.post("/message", async (req, res) => {
   try {
     const { message, patientId } = req.body;
 
+    // Basic validation
     if (!message || !message.trim() || !patientId) {
       return res.status(400).json({
         success: false,
-        reply: "Message or patient context missing."
+        reply: "Message or patient context missing.",
       });
     }
 
@@ -98,9 +100,14 @@ router.post("/message", async (req, res) => {
         { message }
       );
 
-      intent = aiResponse.data.intent;
+      intent = aiResponse.data.intent || "UNKNOWN";
     } catch (err) {
       console.error("BioBERT service error, falling back to rules");
+      intent = detectIntent(message);
+    }
+
+    // Extra safeguard: if AI is unsure, fall back to rules
+    if (!intent || intent === "UNKNOWN") {
       intent = detectIntent(message);
     }
 
@@ -111,7 +118,7 @@ router.post("/message", async (req, res) => {
       return res.json({
         success: true,
         reply:
-          "I can’t help with medical diagnosis or treatment advice. Please consult a qualified healthcare professional."
+          "I can’t help with medical diagnosis or treatment advice. Please consult a qualified healthcare professional.",
       });
     }
 
@@ -120,15 +127,15 @@ router.post("/message", async (req, res) => {
     // ===============================
     if (intent === "GET_BLOOD_GROUP") {
       const patient = await Patient.findOne(
-        { Patient_ID: patientId },
-        { Blood_Type: 1 }
+        { PatientID: patientId },     // schema-consistent
+        { BloodType: 1 }              // schema-consistent
       );
 
       return res.json({
         success: true,
-        reply: patient?.Blood_Type
-          ? `Your blood group is ${patient.Blood_Type}.`
-          : "Blood group information is not available in your profile."
+        reply: patient?.BloodType
+          ? `Your blood group is ${patient.BloodType}.`
+          : "Blood group information is not available in your profile.",
       });
     }
 
@@ -137,15 +144,15 @@ router.post("/message", async (req, res) => {
     // ===============================
     if (intent === "GET_ALLERGIES") {
       const patient = await Patient.findOne(
-        { Patient_ID: patientId },
-        { Drug_Allergies: 1, Other_Allergies: 1 }
+        { PatientID: patientId },
+        { DrugAllergies: 1, OtherAllergies: 1 } // schema-consistent
       );
 
       return res.json({
         success: true,
         reply:
-          `Drug allergies: ${patient?.Drug_Allergies || "None listed"}.\n` +
-          `Other allergies: ${patient?.Other_Allergies || "None listed"}.`
+          `Drug allergies: ${patient?.DrugAllergies || "None listed"}.\n` +
+          `Other allergies: ${patient?.OtherAllergies || "None listed"}.`,
       });
     }
 
@@ -154,15 +161,15 @@ router.post("/message", async (req, res) => {
     // ===============================
     if (intent === "GET_MEDICATIONS") {
       const patient = await Patient.findOne(
-        { Patient_ID: patientId },
-        { Current_Medications: 1 }
+        { PatientID: patientId },
+        { CurrentMedications: 1 } // schema-consistent
       );
 
       return res.json({
         success: true,
-        reply: patient?.Current_Medications
-          ? `Your current medications are: ${patient.Current_Medications}.`
-          : "No current medications are listed."
+        reply: patient?.CurrentMedications
+          ? `Your current medications are: ${patient.CurrentMedications}.`
+          : "No current medications are listed.",
       });
     }
 
@@ -170,12 +177,12 @@ router.post("/message", async (req, res) => {
     // 📋 PROFILE SUMMARY
     // ===============================
     if (intent === "GET_PROFILE_SUMMARY") {
-      const patient = await Patient.findOne({ Patient_ID: patientId });
+      const patient = await Patient.findOne({ PatientID: patientId });
 
       if (!patient) {
         return res.json({
           success: true,
-          reply: "Your medical profile is not found."
+          reply: "Your medical profile is not found.",
         });
       }
 
@@ -183,9 +190,9 @@ router.post("/message", async (req, res) => {
         success: true,
         reply:
           `Profile summary:\n` +
-          `Blood Group: ${patient.Blood_Type || "N/A"}\n` +
-          `Medications: ${patient.Current_Medications || "N/A"}\n` +
-          `Drug Allergies: ${patient.Drug_Allergies || "N/A"}`
+          `Blood Group: ${patient.BloodType || "N/A"}\n` +
+          `Medications: ${patient.CurrentMedications || "N/A"}\n` +
+          `Drug Allergies: ${patient.DrugAllergies || "N/A"}`,
       });
     }
 
@@ -194,15 +201,15 @@ router.post("/message", async (req, res) => {
     // ===============================
     if (intent === "GET_LATEST_REPORT") {
       const record = await MedicalRecord.findOne(
-        { Patient_ID: patientId },
-        { File_Data: 0 }
+        { PatientID: patientId },     // schema-consistent
+        { FileData: 0 }               // exclude binary
       ).sort({ createdAt: -1 });
 
       return res.json({
         success: true,
         reply: record
-          ? `Your latest report is "${record.Record_Title}" (${record.Record_Type}).`
-          : "No medical reports found."
+          ? `Your latest report is "${record.RecordTitle}" (${record.RecordType}).`
+          : "No medical reports found.",
       });
     }
 
@@ -211,7 +218,7 @@ router.post("/message", async (req, res) => {
     // ===============================
     if (intent === "GET_REPORT_LIST") {
       const count = await MedicalRecord.countDocuments({
-        Patient_ID: patientId
+        PatientID: patientId,         // schema-consistent
       });
 
       return res.json({
@@ -219,7 +226,7 @@ router.post("/message", async (req, res) => {
         reply:
           count > 0
             ? `You have ${count} medical records uploaded.`
-            : "You have not uploaded any medical records."
+            : "You have not uploaded any medical records.",
       });
     }
 
@@ -229,14 +236,13 @@ router.post("/message", async (req, res) => {
     return res.json({
       success: true,
       reply:
-        "I can help you with your medical profile and uploaded reports. Try asking about blood group, allergies, medications, or reports."
+        "I can help you with your medical profile and uploaded reports. Try asking about blood group, allergies, medications, or reports.",
     });
-
   } catch (err) {
     console.error("Chatbot error:", err);
     res.status(500).json({
       success: false,
-      reply: "Chatbot service error. Please try again."
+      reply: "Chatbot service error. Please try again.",
     });
   }
 });

@@ -1,68 +1,67 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const toggle = document.getElementById("chatbot-toggle");
-  const chatbot = document.getElementById("chatbot-container");
-  const closeBtn = document.getElementById("chatbot-close");
-  const sendBtn = document.getElementById("chatbot-send");
-  const input = document.getElementById("chatbot-input");
-  const messages = document.getElementById("chatbot-messages");
+  const toggleBtn = document.getElementById("chatbot-toggle");
+  const chatbot   = document.getElementById("chatbot-container");
+  const closeBtn  = document.getElementById("chatbot-close");
+  const sendBtn   = document.getElementById("chatbot-send");
+  const input     = document.getElementById("chatbot-input");
+  const messages  = document.getElementById("chatbot-messages");
 
-  if (!toggle || !chatbot) {
-    console.error("Chatbot elements missing");
+  if (!toggleBtn || !sendBtn || !input || !messages || !chatbot) {
+    console.error("Chatbot elements not found in DOM");
     return;
   }
 
-  // OPEN CHAT (click mascot OR image)
-  toggle.addEventListener("click", openChat);
-  toggle.querySelector("img")?.addEventListener("click", openChat);
+  const BACKEND_URL = "http://localhost:5000"; // use Render URL when deployed
 
-  function openChat() {
+  toggleBtn.addEventListener("click", () => {
     chatbot.classList.remove("chatbot-hidden");
+  });
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      chatbot.classList.add("chatbot-hidden");
+    });
   }
 
-  // CLOSE CHAT
-  closeBtn?.addEventListener("click", () => {
-    chatbot.classList.add("chatbot-hidden");
+  sendBtn.addEventListener("click", sendMessage);
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sendMessage();
+    }
   });
 
-  // SEND MESSAGE
-  sendBtn?.addEventListener("click", sendMessage);
-  input?.addEventListener("keydown", e => {
-    if (e.key === "Enter") sendMessage();
-  });
+  function addMessage(text, sender) {
+    const msg = document.createElement("div");
+    msg.className = sender === "user" ? "chatbot-user" : "chatbot-bot";
+    msg.innerHTML = `<span>${text}</span>`;
+    messages.appendChild(msg);
+    messages.scrollTop = messages.scrollHeight;
+  }
 
   async function sendMessage() {
     const text = input.value.trim();
     if (!text) return;
 
-    addBubble(text, "user");
+    addMessage(text, "user");
     input.value = "";
 
     try {
-      const res = await fetch(
-        "https://emergency-health-locker.onrender.com/api/chatbot/message",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: text,
-            patientId: localStorage.getItem("patient_id")
-          })
-        }
-      );
+      const response = await fetch(`${BACKEND_URL}/api/chatbot/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          patientId: localStorage.getItem("patientid"),
+        }),
+      });
 
-      const data = await res.json();
-      addBubble(data.reply || "No response from assistant.", "bot");
+      const data = await response.json();
+      addMessage(data.reply || "No response from server.", "bot");
     } catch (err) {
       console.error(err);
-      addBubble("⚠️ Chatbot service unavailable.", "bot");
+      addMessage("Unable to reach chatbot service.", "bot");
     }
-  }
-
-  function addBubble(text, type) {
-    const div = document.createElement("div");
-    div.className = type === "user" ? "chatbot-user" : "chatbot-bot";
-    div.innerHTML = `<span>${text}</span>`;
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
   }
 });

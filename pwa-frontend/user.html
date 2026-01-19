@@ -1,34 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>User Dashboard | QURE</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/style.css" />
 </head>
+
 <body>
   <div class="container">
     <h1>👤 USER DASHBOARD</h1>
-    <button>🚪 Logout</button>
+    <button onclick="logout()">🚪 Logout</button>
 
-    <hr>
+    <hr />
 
+    <!-- ================= MEDICAL PROFILE ================= -->
     <h2>✏️ Medical Profile</h2>
-    <input placeholder="Full Name">
-    <input type="date">
-    <select>
+
+    <input id="name" placeholder="Full Name" />
+    <input id="dob" type="date" />
+
+    <select id="gender">
       <option>Male</option>
       <option>Female</option>
       <option>Other</option>
     </select>
 
-    <input placeholder="Blood Group">
-    <textarea placeholder="Current Medications"></textarea>
+    <input id="blood" placeholder="Blood Group" />
+    <input id="emergency_contact" placeholder="Emergency Contact Number" />
 
-    <button>💾 Save Profile</button>
+    <textarea id="medications" placeholder="Current Medications"></textarea>
+    <textarea id="drug_allergies" placeholder="Drug Allergies"></textarea>
+    <textarea id="other_allergies" placeholder="Other Allergies"></textarea>
+    <textarea id="surgeries" placeholder="Recent Surgeries"></textarea>
+
+    <input id="emergency_status" placeholder="Emergency Alert / Condition" />
+    <input id="vitals" placeholder="Last Recorded Vital Signs" />
+    <input id="devices" placeholder="Medical Devices (if any)" />
+
+    <button onclick="saveProfile()">💾 Save Profile</button>
+    <p id="profileMsg"></p>
+
+    <hr />
+
+    <!-- ================= RECORD UPLOAD ================= -->
+    <h2>📤 Upload Medical Record</h2>
+
+    <select id="recordType">
+      <option>Lab Report</option>
+      <option>Prescription</option>
+      <option>Medical Report</option>
+      <option>Scan</option>
+      <option>Other</option>
+    </select>
+
+    <input id="recordTitle" placeholder="Record Title" />
+    <input id="recordFile" type="file" />
+
+    <button onclick="uploadRecord()">⬆️ Upload Record</button>
+    <p id="uploadMsg"></p>
+
+    <hr />
+
+    <!-- ================= RECORD LIST ================= -->
+    <h2>📂 Uploaded Medical Records</h2>
+    <div id="records"></div>
+
+    <hr />
+
+    <!-- ================= EMERGENCY ACCESS ================= -->
+    <h2>🚑 Emergency Access</h2>
+
+    <p><strong>Public Emergency Page Link</strong></p>
+    <input id="emergencyLink" readonly />
+    <button onclick="copyEmergencyLink()">📋 Copy Emergency Link</button>
+
+    <br /><br />
+
+    <h3>Emergency QR Code</h3>
+    <img id="qrImage" width="220" alt="Emergency QR Code" />
+    <p id="qrMsg" style="color:red"></p>
+
+    <br />
+
+    <button onclick="downloadPDF()">📄 Download Medical PDF</button>
   </div>
 
-  <div id="chatbot-toggle">
-    <img src="icons/medical-mascot.png" alt="Medical Assistant">
+   <!-- 🩺 CHATBOT MASCOT -->
+  <div id="chatbot-toggle" title="Medical Assistant">
+    <img src="icons/medical-mascot.png" alt="Nexa Medical Assistant" />
+    <div id="mascot-bubble">👋 Hi, I am Nexa</div>
   </div>
+
+
+  <!-- ================= CHATBOT WINDOW ================= -->
+  <div id="chatbot-container" class="chatbot-hidden">
+    <div id="chatbot-header">
+      <span>🩺 Medical Assistant</span>
+      <button id="chatbot-close">✕</button>
+    </div>
+
+    <div id="chatbot-messages">
+      <div class="chatbot-bot">
+        <span>Hello! Ask me about your blood group, allergies, medications, or reports.</span>
+      </div>
+    </div>
+
+    <div id="chatbot-input-area">
+      <input
+        id="chatbot-input"
+        placeholder="Ask about your medical data..."
+      />
+      <button id="chatbot-send">Send</button>
+    </div>
+  </div>
+
+  <!-- ================= SCRIPTS ================= -->
+  <script src="js/user.js"></script>
+  <script src="js/chatbot.js"></script>
 </body>
 </html>
