@@ -284,10 +284,10 @@ p {
 
 #chatbot-toggle {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 44px;
-  height: 44px;
+  bottom: 180px;
+  right: 70px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: linear-gradient(135deg, #0284c7, #06b6d4);
   color: #fff;
@@ -534,4 +534,32 @@ p {
 
 #chatbot-messages::-webkit-scrollbar-thumb:hover {
   background: rgba(6, 182, 212, 0.7);
+}
+/* ======================================================
+   🔐 LOGIN PAGE LOGO — CENTERED
+   ====================================================== */
+
+body.login-page .logo-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+body.login-page .qure-logo {
+  width: 190px;          /* already correct */
+  height: auto;
+  display: block;
+}
+
+
+/* ======================================================
+   🤍 LOGIN PAGE — PURE WHITE LOGIN BOX
+   ====================================================== */
+
+body.login-page .container {
+  background: #ffffff !important;
+  color: #1e293b;
+  border: none;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
 }
