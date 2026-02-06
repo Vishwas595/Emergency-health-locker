@@ -2,71 +2,37 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 
-// MODELS
+// ================= MODELS =================
 const Patient = require("../models/Patient");
 const MedicalRecord = require("../models/MedicalRecord");
 
-/*
-  RULE-BASED INTENT DETECTION (FALLBACK)
-*/
+// ================= ENV =================
+const BIOBERT_URL =
+  process.env.BIOBERT_URL || "http://localhost:8000";
+
+// ==================================================
+// 🔁 RULE-BASED INTENT DETECTION (FALLBACK)
+// ==================================================
 function detectIntent(message) {
-  const msg = message
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ""); // keep letters, numbers, spaces
+  const msg = message.toLowerCase().replace(/[^a-z0-9\s]/g, "");
 
-  if (
-    msg.includes("blood") ||
-    msg.includes("blood group") ||
-    msg.includes("blood type")
-  ) {
-    return "GET_BLOOD_GROUP";
-  }
-
-  if (
-    msg.includes("allergy") ||
-    msg.includes("allergies")
-  ) {
-    return "GET_ALLERGIES";
-  }
-
-  if (
-    msg.includes("medicine") ||
-    msg.includes("medication") ||
-    msg.includes("medicines")
-  ) {
+  if (msg.includes("blood")) return "GET_BLOOD_GROUP";
+  if (msg.includes("allergy")) return "GET_ALLERGIES";
+  if (msg.includes("medicine") || msg.includes("medication"))
     return "GET_MEDICATIONS";
-  }
-
-  if (
-    msg.includes("summary") ||
-    msg.includes("profile")
-  ) {
+  if (msg.includes("summary") || msg.includes("profile"))
     return "GET_PROFILE_SUMMARY";
-  }
-
-  if (
-    msg.includes("latest report") ||
-    msg.includes("recent report")
-  ) {
+  if (msg.includes("latest report") || msg.includes("recent report"))
     return "GET_LATEST_REPORT";
-  }
-
-  if (
-    msg.includes("report") ||
-    msg.includes("records")
-  ) {
+  if (msg.includes("report") || msg.includes("records"))
     return "GET_REPORT_LIST";
-  }
 
   if (
     msg.includes("diagnose") ||
-    msg.includes("diagnosis") ||
-    msg.includes("treat") ||
     msg.includes("treatment") ||
+    msg.includes("diabetes") ||
     msg.includes("am i") ||
-    msg.includes("do i have") ||
-    msg.includes("diabetic") ||
-    msg.includes("diabetes")
+    msg.includes("do i have")
   ) {
     return "UNSAFE_MEDICAL_REQUEST";
   }
@@ -74,135 +40,134 @@ function detectIntent(message) {
   return "UNKNOWN";
 }
 
-/*
-  CHATBOT MESSAGE HANDLER
-*/
+// ==================================================
+// 💬 CHATBOT MESSAGE ENDPOINT
+// ==================================================
 router.post("/message", async (req, res) => {
   try {
     const { message, patientId } = req.body;
 
-    // Basic validation
-    if (!message || !message.trim() || !patientId) {
+    if (!message || !patientId) {
       return res.status(400).json({
         success: false,
         reply: "Message or patient context missing.",
       });
     }
 
-    // ===============================
+    // ==================================================
     // 🧠 BIOBERT INTENT DETECTION
-    // ===============================
+    // ==================================================
     let intent = "UNKNOWN";
 
     try {
-      const aiResponse = await axios.post(
-        "http://localhost:8000/predict",
-        { message }
+      const aiRes = await axios.post(
+        `${BIOBERT_URL}/predict`,
+        { message },
+        { timeout: 8000 }
       );
 
-      intent = aiResponse.data.intent || "UNKNOWN";
+      intent = aiRes.data?.intent || "UNKNOWN";
     } catch (err) {
-      console.error("BioBERT service error, falling back to rules");
+      console.warn("⚠️ BioBERT unavailable → fallback");
       intent = detectIntent(message);
     }
 
-    // Extra safeguard: if AI is unsure, fall back to rules
     if (!intent || intent === "UNKNOWN") {
       intent = detectIntent(message);
     }
 
-    // ===============================
-    // 🚨 BLOCK UNSAFE MEDICAL REQUESTS
-    // ===============================
+    // ==================================================
+    // 🚨 BLOCK MEDICAL DIAGNOSIS
+    // ==================================================
     if (intent === "UNSAFE_MEDICAL_REQUEST") {
       return res.json({
         success: true,
         reply:
-          "I can’t help with medical diagnosis or treatment advice. Please consult a qualified healthcare professional.",
+          "I can’t provide medical diagnosis or treatment advice. Please consult a qualified doctor.",
       });
     }
 
-    // ===============================
+    // ==================================================
     // 🩸 BLOOD GROUP
-    // ===============================
+    // ==================================================
     if (intent === "GET_BLOOD_GROUP") {
       const patient = await Patient.findOne(
-        { PatientID: patientId },     // schema-consistent
-        { BloodType: 1 }              // schema-consistent
+        { PatientID: patientId },
+        { BloodType: 1 }
       );
 
       return res.json({
         success: true,
         reply: patient?.BloodType
           ? `Your blood group is ${patient.BloodType}.`
-          : "Blood group information is not available in your profile.",
+          : "Blood group is not available in your profile.",
       });
     }
 
-    // ===============================
+    // ==================================================
     // 🚫 ALLERGIES
-    // ===============================
+    // ==================================================
     if (intent === "GET_ALLERGIES") {
       const patient = await Patient.findOne(
         { PatientID: patientId },
-        { DrugAllergies: 1, OtherAllergies: 1 } // schema-consistent
+        { DrugAllergies: 1, OtherAllergies: 1 }
       );
 
       return res.json({
         success: true,
         reply:
-          `Drug allergies: ${patient?.DrugAllergies || "None listed"}.\n` +
-          `Other allergies: ${patient?.OtherAllergies || "None listed"}.`,
+          `Drug allergies: ${patient?.DrugAllergies || "None"}.\n` +
+          `Other allergies: ${patient?.OtherAllergies || "None"}.`,
       });
     }
 
-    // ===============================
+    // ==================================================
     // 💊 MEDICATIONS
-    // ===============================
+    // ==================================================
     if (intent === "GET_MEDICATIONS") {
       const patient = await Patient.findOne(
         { PatientID: patientId },
-        { CurrentMedications: 1 } // schema-consistent
+        { CurrentMedications: 1 }
       );
 
       return res.json({
         success: true,
         reply: patient?.CurrentMedications
           ? `Your current medications are: ${patient.CurrentMedications}.`
-          : "No current medications are listed.",
+          : "No medications listed.",
       });
     }
 
-    // ===============================
+    // ==================================================
     // 📋 PROFILE SUMMARY
-    // ===============================
+    // ==================================================
     if (intent === "GET_PROFILE_SUMMARY") {
       const patient = await Patient.findOne({ PatientID: patientId });
 
       if (!patient) {
         return res.json({
           success: true,
-          reply: "Your medical profile is not found.",
+          reply: "Your medical profile was not found.",
         });
       }
 
       return res.json({
         success: true,
         reply:
-          `Profile summary:\n` +
+          `Profile Summary:\n` +
           `Blood Group: ${patient.BloodType || "N/A"}\n` +
           `Medications: ${patient.CurrentMedications || "N/A"}\n` +
           `Drug Allergies: ${patient.DrugAllergies || "N/A"}`,
       });
     }
 
-    // ===============================
+    // ==================================================
     // 📄 LATEST REPORT
-    // ===============================
+    // ==================================================
     if (intent === "GET_LATEST_REPORT") {
       const record = await MedicalRecord.findOne(
-        { PatientID: patientId },     // schema-consistent
-        { FileData: 0 }               // exclude binary
+        { PatientID: patientId },
+        { FileData: 0 }
       ).sort({ createdAt: -1 });
 
       return res.json({
@@ -213,12 +178,12 @@ router.post("/message", async (req, res) => {
       });
     }
 
-    // ===============================
-    // 📂 REPORT LIST
-    // ===============================
+    // ==================================================
+    // 📂 REPORT COUNT
+    // ==================================================
     if (intent === "GET_REPORT_LIST") {
       const count = await MedicalRecord.countDocuments({
-        PatientID: patientId,         // schema-consistent
+        PatientID: patientId,
       });
 
       return res.json({
@@ -230,19 +195,19 @@ router.post("/message", async (req, res) => {
       });
     }
 
-    // ===============================
-    // 🤷 UNKNOWN
-    // ===============================
+    // ==================================================
+    // 🤖 DEFAULT RESPONSE
+    // ==================================================
     return res.json({
       success: true,
       reply:
-        "I can help you with your medical profile and uploaded reports. Try asking about blood group, allergies, medications, or reports.",
+        "I can help you with blood group, allergies, medications, and medical reports. Try asking about them.",
     });
   } catch (err) {
-    console.error("Chatbot error:", err);
-    res.status(500).json({
+    console.error("❌ Chatbot error:", err);
+    return res.status(500).json({
       success: false,
-      reply: "Chatbot service error. Please try again.",
+      reply: "Chatbot service error. Please try again later.",
     });
   }
 });
