@@ -1,125 +1,70 @@
-document.addEventListener("DOMContentLoaded", () => {
+async function sendMessage() {
 
-  const toggleBtn = document.getElementById("chatbot-toggle");
-  const chatbot = document.getElementById("chatbot-container");
-  const closeBtn = document.getElementById("chatbot-close");
-  const sendBtn = document.getElementById("chatbot-send");
-  const input = document.getElementById("chatbot-input");
-  const messages = document.getElementById("chatbot-messages");
+  const text = input.value.trim();
+  if (!text) return;
 
-  if (!toggleBtn || !chatbot || !sendBtn || !input || !messages) {
-    console.error("❌ Chatbot elements missing");
+  const patientId = localStorage.getItem("patient_id");
+
+  if (!patientId) {
+    addMessage("⚠️ Patient not logged in.", "bot");
     return;
   }
 
-  // ================================
-  // 🔹 HUGGING FACE API URL
-  // ================================
-  const HF_API =
-    "https://vishwas001805-biobert-emergency.hf.space/run/medical_assistant";
+  addMessage(text, "user");
+  input.value = "";
+  sendBtn.disabled = true;
 
-  // ================================
-  // 🔹 START CLOSED
-  // ================================
-  chatbot.classList.add("chatbot-hidden");
+  try {
 
-  // ================================
-  // 🔹 OPEN CHAT
-  // ================================
-  toggleBtn.addEventListener("click", () => {
-    chatbot.classList.remove("chatbot-hidden");
-  });
-
-  // ================================
-  // 🔹 CLOSE CHAT
-  // ================================
-  closeBtn?.addEventListener("click", () => {
-    chatbot.classList.add("chatbot-hidden");
-  });
-
-  // ================================
-  // 🔹 SEND EVENTS
-  // ================================
-  sendBtn.addEventListener("click", sendMessage);
-
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-
-  // ================================
-  // 🔹 ADD MESSAGE FUNCTION
-  // ================================
-  function addMessage(text, sender) {
-    const msg = document.createElement("div");
-    msg.className =
-      sender === "user" ? "chatbot-user" : "chatbot-bot";
-
-    msg.innerHTML = `<span>${text}</span>`;
-    messages.appendChild(msg);
-    messages.scrollTop = messages.scrollHeight;
-  }
-
-  // ================================
-  // 🔹 MAIN SEND FUNCTION
-  // ================================
-  async function sendMessage() {
-
-    const text = input.value.trim();
-    if (!text) return;
-
-    const patientId = localStorage.getItem("patient_id");
-
-    if (!patientId) {
-      addMessage("⚠️ Patient not logged in.", "bot");
-      return;
-    }
-
-    addMessage(text, "user");
-    input.value = "";
-    sendBtn.disabled = true;
-
-    try {
-
-      const response = await fetch(HF_API, {
+    const response = await fetch(
+      "https://vishwas001805-biobert-emergency.hf.space/queue/join",
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          data: [patientId, text]   // IMPORTANT FORMAT
+          data: [patientId, text],
+          fn_index: 0
         })
-      });
-
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
       }
+    );
 
-      const result = await response.json();
-      console.log("HF Response:", result);
+    const result = await response.json();
+    console.log("HF Queue Response:", result);
 
-      if (result && result.data) {
+    // Wait for result polling
+    if (result.hash) {
 
-        if (Array.isArray(result.data) && result.data.length > 0) {
-          addMessage(result.data[0], "bot");
-        } else {
-          addMessage("⚠️ Assistant returned empty response.", "bot");
+      const statusUrl =
+        `https://vishwas001805-biobert-emergency.hf.space/queue/data?hash=${result.hash}`;
+
+      let completed = false;
+      let output = null;
+
+      while (!completed) {
+
+        const statusResponse = await fetch(statusUrl);
+        const statusData = await statusResponse.json();
+
+        if (statusData.status === "COMPLETE") {
+          completed = true;
+          output = statusData.output.data[0];
         }
 
-      } else if (result.error) {
-        addMessage("⚠️ " + result.error, "bot");
-      } else {
-        addMessage("⚠️ Unexpected server response.", "bot");
+        await new Promise(r => setTimeout(r, 1000));
       }
 
-    } catch (error) {
-      console.error("Chatbot error:", error);
-      addMessage("⚠️ Chatbot service unavailable.", "bot");
-    } finally {
-      sendBtn.disabled = false;
-    }
-  }
+      addMessage(output || "No response from assistant.", "bot");
 
-});
+    } else {
+      addMessage("⚠️ Assistant queue error.", "bot");
+    }
+
+  } catch (error) {
+    console.error("Chatbot error:", error);
+    addMessage("⚠️ Chatbot service unavailable.", "bot");
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
