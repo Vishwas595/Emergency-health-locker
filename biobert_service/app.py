@@ -5,11 +5,13 @@ import os
 
 app = Flask(__name__)
 
+# Load model once at startup
 tokenizer = BertTokenizer.from_pretrained("dmis-lab/biobert-base-cased-v1.1")
 model = BertForSequenceClassification.from_pretrained(
     "dmis-lab/biobert-base-cased-v1.1",
     num_labels=7
 )
+model.eval()  # Put in evaluation mode
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -19,9 +21,10 @@ def predict():
     if not text:
         return jsonify({"intent": "UNKNOWN"})
 
-    inputs = tokenizer(text, return_tensors="pt", truncation=True)
-    outputs = model(**inputs)
-    intent_id = torch.argmax(outputs.logits, dim=1).item()
+    with torch.no_grad():  # Disable gradient calculation
+        inputs = tokenizer(text, return_tensors="pt", truncation=True)
+        outputs = model(**inputs)
+        intent_id = torch.argmax(outputs.logits, dim=1).item()
 
     intents = [
         "GET_BLOOD_GROUP",
