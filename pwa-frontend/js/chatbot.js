@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // CONFIGURATION
     // ================================
     const SPACE_NAME = "Vishwas001805/biobert-emergency";
-    let gradioClient = null;
+    let gradioApp = null;
 
     // ================================
     // START CLOSED
@@ -28,13 +28,15 @@ document.addEventListener("DOMContentLoaded", () => {
     toggleBtn.addEventListener("click", async () => {
         chatbot.classList.remove("chatbot-hidden");
         
-        // Initialize Gradio client on first open
-        if (!gradioClient) {
+        // Initialize Gradio client once
+        if (!gradioApp) {
             try {
-                gradioClient = await window.gradio.client(SPACE_NAME);
-                console.log("✅ Gradio client connected");
+                console.log("Connecting to Gradio Space...");
+                gradioApp = await window.gradio.client(SPACE_NAME);
+                console.log("✅ Connected to Gradio Space");
             } catch (error) {
-                console.error("Failed to connect to Gradio:", error);
+                console.error("Failed to connect:", error);
+                addMessage("⚠️ Could not connect to medical assistant.", "bot");
             }
         }
     });
@@ -69,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function addMessage(text, sender) {
         const msg = document.createElement("div");
         msg.className = sender === "user" ? "chatbot-user" : "chatbot-bot";
-        msg.innerHTML = `${text}`;
+        msg.innerHTML = `<span>${text}</span>`;
         messages.appendChild(msg);
         messages.scrollTop = messages.scrollHeight;
     }
@@ -92,27 +94,33 @@ document.addEventListener("DOMContentLoaded", () => {
         sendBtn.disabled = true;
 
         try {
-            // Initialize client if not already done
-            if (!gradioClient) {
-                gradioClient = await window.gradio.client(SPACE_NAME);
+            // Connect if not already connected
+            if (!gradioApp) {
+                console.log("Connecting to Gradio Space...");
+                gradioApp = await window.gradio.client(SPACE_NAME);
+                console.log("✅ Connected");
             }
 
+            console.log("Sending:", patientId, text);
+
             // Call the medical_assistant function
-            const result = await gradioClient.predict("/medical_assistant", [
-                patientId,
-                text
-            ]);
+            const result = await gradioApp.predict("/medical_assistant", {
+                patient_id: patientId,
+                message: text
+            });
+
+            console.log("Result:", result);
 
             // Display response
-            if (result && result.data && result.data.length > 0) {
-                addMessage(result.data[0], "bot");
+            if (result && result.data) {
+                addMessage(result.data, "bot");
             } else {
                 addMessage("No response from assistant.", "bot");
             }
 
         } catch (error) {
             console.error("Chatbot error:", error);
-            addMessage("⚠️ Chatbot service unavailable. Please try again.", "bot");
+            addMessage("⚠️ Service unavailable. Please try again.", "bot");
         } finally {
             sendBtn.disabled = false;
         }
