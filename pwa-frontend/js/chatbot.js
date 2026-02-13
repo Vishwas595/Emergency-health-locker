@@ -1,117 +1,120 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const toggleBtn = document.getElementById("chatbot-toggle");
+    const chatbot = document.getElementById("chatbot-container");
+    const closeBtn = document.getElementById("chatbot-close");
+    const sendBtn = document.getElementById("chatbot-send");
+    const input = document.getElementById("chatbot-input");
+    const messages = document.getElementById("chatbot-messages");
 
-  const toggleBtn = document.getElementById("chatbot-toggle");
-  const chatbot = document.getElementById("chatbot-container");
-  const closeBtn = document.getElementById("chatbot-close");
-  const sendBtn = document.getElementById("chatbot-send");
-  const input = document.getElementById("chatbot-input");
-  const messages = document.getElementById("chatbot-messages");
+    if (!toggleBtn || !chatbot || !sendBtn || !input || !messages) {
+        console.error("❌ Chatbot elements missing in DOM");
+        return;
+    }
 
-  if (!toggleBtn || !chatbot || !sendBtn || !input || !messages) {
-    console.error("❌ Chatbot elements missing in DOM");
-    return;
-  }
+    // ================================
+    // CONFIGURATION
+    // ================================
+    const SPACE_NAME = "Vishwas001805/biobert-emergency";
+    let gradioClient = null;
 
-  // ============================
-  // Hugging Face API URL
-  // ============================
-  const HF_API =
-    "https://vishwas001805-biobert-emergency.hf.space/run/medical_assistant";
+    // ================================
+    // START CLOSED
+    // ================================
+    chatbot.classList.add("chatbot-hidden");
 
-  // ============================
-  // Start closed
-  // ============================
-  chatbot.classList.add("chatbot-hidden");
-
-  // ============================
-  // Open chatbot
-  // ============================
-  toggleBtn.addEventListener("click", () => {
-    chatbot.classList.remove("chatbot-hidden");
-  });
-
-  // ============================
-  // Close chatbot
-  // ============================
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      chatbot.classList.add("chatbot-hidden");
+    // ================================
+    // OPEN CHATBOT
+    // ================================
+    toggleBtn.addEventListener("click", async () => {
+        chatbot.classList.remove("chatbot-hidden");
+        
+        // Initialize Gradio client on first open
+        if (!gradioClient) {
+            try {
+                gradioClient = await window.gradio.client(SPACE_NAME);
+                console.log("✅ Gradio client connected");
+            } catch (error) {
+                console.error("Failed to connect to Gradio:", error);
+            }
+        }
     });
-  }
 
-  // ============================
-  // Send button click
-  // ============================
-  sendBtn.addEventListener("click", sendMessage);
-
-  // ============================
-  // Enter key send
-  // ============================
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-
-  // ============================
-  // Add message to UI
-  // ============================
-  function addMessage(text, sender) {
-    const msg = document.createElement("div");
-    msg.className = sender === "user" ? "chatbot-user" : "chatbot-bot";
-    msg.innerHTML = `<span>${text}</span>`;
-    messages.appendChild(msg);
-    messages.scrollTop = messages.scrollHeight;
-  }
-
-  // ============================
-  // Main send function
-  // ============================
-  async function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
-
-    const patientId = localStorage.getItem("patient_id");
-
-    if (!patientId) {
-      addMessage("⚠️ Patient not logged in.", "bot");
-      return;
+    // ================================
+    // CLOSE CHATBOT
+    // ================================
+    if (closeBtn) {
+        closeBtn.addEventListener("click", () => {
+            chatbot.classList.add("chatbot-hidden");
+        });
     }
 
-    addMessage(text, "user");
-    input.value = "";
-    sendBtn.disabled = true;
+    // ================================
+    // SEND BUTTON
+    // ================================
+    sendBtn.addEventListener("click", sendMessage);
 
-    try {
-      const response = await fetch(HF_API, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          data: [patientId, text]   // REQUIRED FORMAT FOR GRADIO
-        })
-      });
+    // ================================
+    // ENTER KEY
+    // ================================
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
 
-      if (!response.ok) {
-        throw new Error("Network response not OK");
-      }
-
-      const result = await response.json();
-
-      if (result.data && result.data.length > 0) {
-        addMessage(result.data[0], "bot");
-      } else {
-        addMessage("No response from assistant.", "bot");
-      }
-
-    } catch (error) {
-      console.error("Chatbot error:", error);
-      addMessage("⚠️ Chatbot service unavailable.", "bot");
-    } finally {
-      sendBtn.disabled = false;
+    // ================================
+    // ADD MESSAGE TO UI
+    // ================================
+    function addMessage(text, sender) {
+        const msg = document.createElement("div");
+        msg.className = sender === "user" ? "chatbot-user" : "chatbot-bot";
+        msg.innerHTML = `${text}`;
+        messages.appendChild(msg);
+        messages.scrollTop = messages.scrollHeight;
     }
-  }
 
+    // ================================
+    // SEND MESSAGE FUNCTION
+    // ================================
+    async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        const patientId = localStorage.getItem("patient_id");
+        if (!patientId) {
+            addMessage("⚠️ Patient not logged in.", "bot");
+            return;
+        }
+
+        addMessage(text, "user");
+        input.value = "";
+        sendBtn.disabled = true;
+
+        try {
+            // Initialize client if not already done
+            if (!gradioClient) {
+                gradioClient = await window.gradio.client(SPACE_NAME);
+            }
+
+            // Call the medical_assistant function
+            const result = await gradioClient.predict("/medical_assistant", [
+                patientId,
+                text
+            ]);
+
+            // Display response
+            if (result && result.data && result.data.length > 0) {
+                addMessage(result.data[0], "bot");
+            } else {
+                addMessage("No response from assistant.", "bot");
+            }
+
+        } catch (error) {
+            console.error("Chatbot error:", error);
+            addMessage("⚠️ Chatbot service unavailable. Please try again.", "bot");
+        } finally {
+            sendBtn.disabled = false;
+        }
+    }
 });
