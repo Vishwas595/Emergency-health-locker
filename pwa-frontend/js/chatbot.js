@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
-    // ✅ CORRECTED ENDPOINT
+    // ✅ CORRECT ENDPOINT
     const API_URL = "https://vishwas001805-biobert-emergency.hf.space/call/medical_assistant";
 
     chatbot.classList.add("chatbot-hidden");
@@ -60,13 +60,15 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             console.log("Sending to HF:", patientId, text);
 
+            // ✅ CORRECT FORMAT: Use named parameters
             const response = await fetch(API_URL, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    data: [patientId, text]
+                    patient_id: patientId,
+                    message: text
                 })
             });
 
@@ -77,23 +79,30 @@ document.addEventListener("DOMContentLoaded", () => {
             const result = await response.json();
             console.log("HF Response:", result);
 
-            // Handle Gradio's queue-based response
+            // Handle Gradio queue response
             if (result.event_id) {
-                // Poll for result
-                const pollUrl = `https://vishwas001805-biobert-emergency.hf.space/call/medical_assistant/${result.event_id}`;
+                // Poll for result using event_id
+                const eventId = result.event_id;
+                const pollUrl = `https://vishwas001805-biobert-emergency.hf.space/call/medical_assistant/${eventId}`;
+                
+                console.log("Polling:", pollUrl);
+                
+                // Wait a bit before polling
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 
                 const pollResponse = await fetch(pollUrl);
                 const pollResult = await pollResponse.json();
                 
                 console.log("Poll Result:", pollResult);
                 
-                if (pollResult.data && pollResult.data.length > 0) {
-                    addMessage(pollResult.data[0], "bot");
+                if (pollResult && pollResult.data) {
+                    addMessage(pollResult.data, "bot");
                 } else {
                     addMessage("No response from assistant.", "bot");
                 }
-            } else if (result.data && result.data.length > 0) {
-                addMessage(result.data[0], "bot");
+            } else if (result.data) {
+                // Direct response
+                addMessage(result.data, "bot");
             } else {
                 addMessage("No response from assistant.", "bot");
             }
