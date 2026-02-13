@@ -7,57 +7,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const messages = document.getElementById("chatbot-messages");
 
     if (!toggleBtn || !chatbot || !sendBtn || !input || !messages) {
-        console.error("❌ Chatbot elements missing in DOM");
+        console.error("❌ Chatbot elements missing");
         return;
     }
 
-    // ================================
-    // CONFIGURATION
-    // ================================
-    const SPACE_NAME = "Vishwas001805/biobert-emergency";
-    let gradioApp = null;
+    const API_URL = "https://vishwas001805-biobert-emergency.hf.space/api/predict";
 
-    // ================================
-    // START CLOSED
-    // ================================
     chatbot.classList.add("chatbot-hidden");
 
-    // ================================
-    // OPEN CHATBOT
-    // ================================
-    toggleBtn.addEventListener("click", async () => {
+    toggleBtn.addEventListener("click", () => {
         chatbot.classList.remove("chatbot-hidden");
-        
-        // Initialize Gradio client once
-        if (!gradioApp) {
-            try {
-                console.log("Connecting to Gradio Space...");
-                gradioApp = await window.gradio.client(SPACE_NAME);
-                console.log("✅ Connected to Gradio Space");
-            } catch (error) {
-                console.error("Failed to connect:", error);
-                addMessage("⚠️ Could not connect to medical assistant.", "bot");
-            }
-        }
     });
 
-    // ================================
-    // CLOSE CHATBOT
-    // ================================
     if (closeBtn) {
         closeBtn.addEventListener("click", () => {
             chatbot.classList.add("chatbot-hidden");
         });
     }
 
-    // ================================
-    // SEND BUTTON
-    // ================================
     sendBtn.addEventListener("click", sendMessage);
 
-    // ================================
-    // ENTER KEY
-    // ================================
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
             e.preventDefault();
@@ -65,9 +34,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ================================
-    // ADD MESSAGE TO UI
-    // ================================
     function addMessage(text, sender) {
         const msg = document.createElement("div");
         msg.className = sender === "user" ? "chatbot-user" : "chatbot-bot";
@@ -76,9 +42,6 @@ document.addEventListener("DOMContentLoaded", () => {
         messages.scrollTop = messages.scrollHeight;
     }
 
-    // ================================
-    // SEND MESSAGE FUNCTION
-    // ================================
     async function sendMessage() {
         const text = input.value.trim();
         if (!text) return;
@@ -94,26 +57,23 @@ document.addEventListener("DOMContentLoaded", () => {
         sendBtn.disabled = true;
 
         try {
-            // Connect if not already connected
-            if (!gradioApp) {
-                console.log("Connecting to Gradio Space...");
-                gradioApp = await window.gradio.client(SPACE_NAME);
-                console.log("✅ Connected");
-            }
+            console.log("Sending to HF:", patientId, text);
 
-            console.log("Sending:", patientId, text);
-
-            // Call the medical_assistant function
-            const result = await gradioApp.predict("/medical_assistant", {
-                patient_id: patientId,
-                message: text
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    data: [patientId, text]
+                })
             });
 
-            console.log("Result:", result);
+            const result = await response.json();
+            console.log("HF Response:", result);
 
-            // Display response
-            if (result && result.data) {
-                addMessage(result.data, "bot");
+            if (result.data && result.data.length > 0) {
+                addMessage(result.data[0], "bot");
             } else {
                 addMessage("No response from assistant.", "bot");
             }
