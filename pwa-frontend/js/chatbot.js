@@ -11,7 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
-    const API_URL = "https://vishwas001805-biobert-emergency.hf.space/api/predict";
+    // ✅ CORRECTED ENDPOINT
+    const API_URL = "https://vishwas001805-biobert-emergency.hf.space/call/medical_assistant";
 
     chatbot.classList.add("chatbot-hidden");
 
@@ -69,10 +70,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 })
             });
 
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
             const result = await response.json();
             console.log("HF Response:", result);
 
-            if (result.data && result.data.length > 0) {
+            // Handle Gradio's queue-based response
+            if (result.event_id) {
+                // Poll for result
+                const pollUrl = `https://vishwas001805-biobert-emergency.hf.space/call/medical_assistant/${result.event_id}`;
+                
+                const pollResponse = await fetch(pollUrl);
+                const pollResult = await pollResponse.json();
+                
+                console.log("Poll Result:", pollResult);
+                
+                if (pollResult.data && pollResult.data.length > 0) {
+                    addMessage(pollResult.data[0], "bot");
+                } else {
+                    addMessage("No response from assistant.", "bot");
+                }
+            } else if (result.data && result.data.length > 0) {
                 addMessage(result.data[0], "bot");
             } else {
                 addMessage("No response from assistant.", "bot");
